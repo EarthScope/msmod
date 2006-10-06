@@ -18,8 +18,8 @@ cflags = $(cflags) -DWIN32
 
 all: $(BIN)
 
-$(BIN):	msmod.obj
-	link.exe /nologo /out:$(BIN) $(LIBS) msmod.obj
+$(BIN):	msmod.obj dsarchive.obj
+	link.exe /nologo /out:$(BIN) $(LIBS) msmod.obj dsarchive.obj
 
 .c.obj:
    $(cc) /nologo $(cflags) $(cdebug) $(cvarsmt) $(tflags) $(INCS) $<

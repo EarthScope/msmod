@@ -17,11 +17,12 @@ INCS = -I..\libmseed
 
 all: $(BIN)
 
-$(BIN):	msmod.obj
-	wlink $(lflags) name $(BIN) file {msmod.obj}
+$(BIN):	msmod.obj dsarchive.obj
+	wlink $(lflags) name $(BIN) file {msmod.obj dsarchive.obj}
 
 # Source dependencies:
-msmod.obj:	msmod.c
+msmod.obj:	msmod.c dsarchive.h
+dsarchive.obj:	dsarchive.c dsarchive.h
 
 # How to compile sources:
 .c.obj:
