@@ -6,8 +6,23 @@
  *
  * Written by Chad Trabant, IRIS Data Management Center.
  *
- * modified 2006.279
+ * modified 2006.282
  ***************************************************************************/
+
+/* Note to future hackers:
+ *
+ * The current framework does not allow easily adding the modification
+ * of key fields like byte-order and record length because modifying
+ * these fields triggers libmseed to make changes during packing.
+ * This is in part due to the assumption in libmseed that records read
+ * are valid and not fundamentally broken.  For instance an option to
+ * change the byte-order flag would imply that the original byte-order
+ * is not correct or, in the case of libmseed, that the user is
+ * requesting a change. A modification engine that does not require
+ * the use of libmseed's ms_packheader() would be able to make any
+ * arbitrary change, but said engine would additionally need to deal
+ * with all the byte order and parsing issues.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,8 +36,11 @@
 
 #include "dsarchive.h"
 
-#define VERSION "0.1"
+#define VERSION "0.2"
 #define PACKAGE "msmod"
+
+/* A simple bitwise AND test to return 0 or 1 */
+#define bittest(x,y) (x&y)?1:0
 
 /* For a linked list of input files */
 typedef struct Filelink_s {
@@ -58,11 +76,24 @@ static Archive *archiveroot   = 0;    /* Output file structures */
 static Filelink *filelist = 0;
 
 /* Modification specifiers */
-static double   modtimedelta  = 0;
-static char    *modnet        = 0;
-static char    *modsta        = 0;
-static char    *modloc        = 0;
-static char    *modchan       = 0;
+static char    *modnet          = 0;
+static char    *modsta          = 0;
+static char    *modloc          = 0;
+static char    *modchan         = 0;
+static char     modquality      = 0;
+static double   modtimeshift    = 0;
+static double   modsamprate     = 0;
+static int      modtimecorr     = 0;
+static char     mod0actflags    = 0;
+static char     mod1actflags    = 0;
+static char     mod0ioflags     = 0;
+static char     mod1ioflags     = 0;
+static char     mod0dqflags     = 0;
+static char     mod1dqflags     = 0;
+static double   modb100samprate = 0;
+static int      modb1000enc     = 0;
+static int      modb1001tqual   = 0;
+
 
 int
 main ( int argc, char **argv )
@@ -256,7 +287,9 @@ main ( int argc, char **argv )
 /***************************************************************************
  * processmods():
  *
- * Process all specified modifcations on the specified MSRecord.
+ * Process all specified modifcations on the specified MSRecord.  No
+ * field validation is done in this routine, all values are expected
+ * to be valid for each given field.
  *
  * Returns 0 on success, and -1 on failure
  ***************************************************************************/
@@ -290,11 +323,17 @@ processmods (MSRecord *msr)
       strncpy (msr->channel, modchan, sizeof(msr->channel));
     }
   
-  /* Modify start time */
-  if ( modtimedelta )
+  /* Modify data header indicator/quality code */
+  if ( modquality )
+    {
+      msr->dataquality = modquality;
+    }
+  
+  /* Modify time tag */
+  if ( modtimeshift )
     {
       if ( verbose > 1 )
-	fprintf (stderr, "Shifting record starttime by %g seconds\n", modtimedelta);
+	fprintf (stderr, "Shifting record starttime by %g seconds\n", modtimeshift);
       
       if ( verbose && msr->fsdh->time_correct && ! (msr->fsdh->act_flags & 0x02) )
 	fprintf (stderr, "Warning, applying time correction over another time correction\n");
@@ -303,10 +342,109 @@ processmods (MSRecord *msr)
       msr->fsdh->act_flags |= 0x02;
       
       /* Set the time correction field, value is units of 0.0001 seconds */
-      msr->fsdh->time_correct = modtimedelta * 10000;
+      msr->fsdh->time_correct = modtimeshift * 10000;
       
       /* Apply time shift to starttime */
-      msr->starttime += (hptime_t) (modtimedelta * HPTMODULUS);
+      msr->starttime += (hptime_t) (modtimeshift * HPTMODULUS);
+    }
+
+  /* Modify sampling rate */
+  if ( modsamprate )
+    {
+      msr->samprate = modsamprate;
+    }
+  
+  /* Modify time correction */
+  if ( modtimecorr )
+    {
+      if ( msr->fsdh )
+	msr->fsdh->time_correct = modtimecorr;
+      else
+	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
+    }
+
+  /* Modify activity flags */
+  if ( mod0actflags )
+    {
+      /* Reverse sense of bit set for later XOR */
+      mod0actflags ^= 0xFF;
+      
+      if ( msr->fsdh )
+	/* XOR bit set with the activity flags */
+	msr->fsdh->act_flags &= mod0actflags;
+      else
+	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
+    }
+  if ( mod1actflags )
+    {
+      if ( msr->fsdh )
+	/* OR bit set with the activity flags */
+	msr->fsdh->act_flags |= mod1actflags;
+      else
+	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
+    }
+  
+  /* Modify I/O flags */
+  if ( mod0ioflags )
+    {
+      /* Reverse sense of bit set for later XOR */
+      mod0ioflags ^= 0xFF;
+      
+      if ( msr->fsdh )
+	/* XOR bit set with the I/O flags */
+	msr->fsdh->io_flags &= mod0ioflags;
+      else
+	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
+    }
+  if ( mod1ioflags )
+    {
+      if ( msr->fsdh )
+	/* OR bit set with the I/O flags */
+	msr->fsdh->io_flags |= mod1ioflags;
+      else
+	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
+    }
+
+  /* Modify data quality flags */
+  if ( mod0dqflags )
+    {
+      /* Reverse sense of bit set for later XOR */
+      mod0dqflags ^= 0xFF;
+      
+      if ( msr->fsdh )
+	/* XOR bit set with the data quality flags */
+	msr->fsdh->dq_flags &= mod0dqflags;
+      else
+	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
+    }
+  if ( mod1dqflags )
+    {
+      if ( msr->fsdh )
+	/* OR bit set with the data quality flags */
+	msr->fsdh->dq_flags |= mod1dqflags;
+      else
+	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
+    }
+  
+  /* Modify Blockette 100 actual sample rate */
+  if ( modb100samprate )
+    {
+      if ( msr->Blkt100 ) 
+	msr->Blkt100->samprate = modb100samprate;
+    }
+  
+  /* Modify Blockette 1000 encoding format */
+  if ( modb1000enc )
+    {
+      /* This value will be copied into Blockette 1000 during packing */
+      msr->encoding = modb1000enc;
+    }
+  
+  /* Modify Blockette 1001 timing quality value */
+  if ( modb1001tqual )
+    {
+      if ( msr->Blkt1001 )
+	msr->Blkt1001->timing_qual = modb1001tqual;
     }
   
   return 0;
@@ -326,6 +464,8 @@ processparam (int argcount, char **argvec)
   char *matchpattern = 0;
   char *rejectpattern = 0;
   char *tptr;
+  char *bit,*val;
+  double tdbl;
   
   /* Process all command line arguments */
   for (optind = 1; optind < argcount; optind++)
@@ -349,7 +489,7 @@ processparam (int argcount, char **argvec)
 	{
 	  verbose += strspn (&argvec[optind][1], "v");
 	}
-      else if (strcmp (argvec[optind], "-sum") == 0)
+      else if (strcmp (argvec[optind], "-s") == 0)
 	{
 	  basicsum = 1;
 	}
@@ -402,10 +542,6 @@ processparam (int argcount, char **argvec)
           if ( addarchive(getoptval(argcount, argvec, optind++), CSSLAYOUT) == -1 )
             return -1;
         }
-      else if (strcmp (argvec[optind], "--timedelta") == 0)
-        {
-	  modtimedelta = strtod (getoptval(argcount, argvec, optind++) ,NULL);
-        }
       else if (strcmp (argvec[optind], "--net") == 0)
         {
 	  modnet = getoptval(argcount, argvec, optind++);
@@ -421,6 +557,137 @@ processparam (int argcount, char **argvec)
       else if (strcmp (argvec[optind], "--chan") == 0)
         {
 	  modchan = getoptval(argcount, argvec, optind++);
+        }
+      else if (strcmp (argvec[optind], "--quality") == 0)
+        {
+	  tptr = getoptval(argcount, argvec, optind++);
+	  modquality = *tptr;
+	  
+	  if ( ! MS_ISDATAINDICATOR(modquality) )
+	    fprintf (stderr, "WARNING: '%c' is not a recognized data quality indicator\n", modquality);
+        }
+      else if (strcmp (argvec[optind], "--timeshift") == 0)
+        {
+	  modtimeshift = strtod (getoptval(argcount, argvec, optind++) ,NULL);
+        }
+      else if (strcmp (argvec[optind], "--samprate") == 0)
+        {
+	  modsamprate = strtod (getoptval(argcount, argvec, optind++) ,NULL);
+        }
+      else if (strcmp (argvec[optind], "--timecorr") == 0)
+        {
+	  tdbl = strtod (getoptval(argcount, argvec, optind++) ,NULL);
+	  modtimecorr = tdbl * 10000;
+        }
+      else if (strcmp (argvec[optind], "--actflags") == 0)
+        {
+	  bit = getoptval(argcount, argvec, optind++);
+	  val = bit+2;
+	  
+	  if ( *(bit+1) != ',' )
+	    {
+	      fprintf (stderr, "ERROR, 'bit,value' format unrecognized\n");
+	      return -1;
+	    }
+	  
+	  if ( *val != '0' && *val != '1' )
+	    {
+	      fprintf (stderr, "ERROR, 'value' of bit must be 0 or 1\n");
+	      return -1;
+	    }
+	  
+	  switch ( *bit ) {
+	  case '0': if ( *val == '0' ) mod0actflags |= 0x01; else mod1actflags |= 0x01; break;
+	  case '1': if ( *val == '0' ) mod0actflags |= 0x02; else mod1actflags |= 0x02; break;
+	  case '2': if ( *val == '0' ) mod0actflags |= 0x04; else mod1actflags |= 0x04; break;
+	  case '3': if ( *val == '0' ) mod0actflags |= 0x08; else mod1actflags |= 0x08; break;
+	  case '4': if ( *val == '0' ) mod0actflags |= 0x10; else mod1actflags |= 0x10; break;
+	  case '5': if ( *val == '0' ) mod0actflags |= 0x20; else mod1actflags |= 0x20; break;
+	  case '6': if ( *val == '0' ) mod0actflags |= 0x40; else mod1actflags |= 0x40; break;
+	  case '7': if ( *val == '0' ) mod0actflags |= 0x80; else mod1actflags |= 0x80; break;
+	  default:  fprintf (stderr, "ERROR, unrecognized activity flag bit: '%c'\n", *bit); return -1;
+	  }
+        }
+      else if (strcmp (argvec[optind], "--ioflags") == 0)
+        {
+	  bit = getoptval(argcount, argvec, optind++);
+	  val = bit+2;
+
+	  if ( *(bit+1) != ',' )
+	    {
+	      fprintf (stderr, "ERROR, 'bit,value' format unrecognized\n");
+	      return -1;
+	    }
+	  
+	  if ( *val != '0' && *val != '1' )
+	    {
+	      fprintf (stderr, "ERROR, 'value' of bit must be 0 or 1\n");
+	      return -1;
+	    }
+	  
+	  switch ( *bit ) {
+	  case '0': if ( *val == '0' ) mod0ioflags |= 0x01; else mod1ioflags |= 0x01; break;
+	  case '1': if ( *val == '0' ) mod0ioflags |= 0x02; else mod1ioflags |= 0x02; break;
+	  case '2': if ( *val == '0' ) mod0ioflags |= 0x04; else mod1ioflags |= 0x04; break;
+	  case '3': if ( *val == '0' ) mod0ioflags |= 0x08; else mod1ioflags |= 0x08; break;
+	  case '4': if ( *val == '0' ) mod0ioflags |= 0x10; else mod1ioflags |= 0x10; break;
+	  case '5': if ( *val == '0' ) mod0ioflags |= 0x20; else mod1ioflags |= 0x20; break;
+	  case '6': if ( *val == '0' ) mod0ioflags |= 0x40; else mod1ioflags |= 0x40; break;
+	  case '7': if ( *val == '0' ) mod0ioflags |= 0x80; else mod1ioflags |= 0x80; break;
+	  default:  fprintf (stderr, "ERROR, unrecognized I/O flag bit: '%c'\n", *bit); return -1;
+	  }
+        }      
+      else if (strcmp (argvec[optind], "--dqflags") == 0)
+        {
+	  bit = getoptval(argcount, argvec, optind++);
+	  val = bit+2;
+
+	  if ( *(bit+1) != ',' )
+	    {
+	      fprintf (stderr, "ERROR, 'bit,value' format unrecognized\n");
+	      return -1;
+	    }
+	  
+	  if ( *val != '0' && *val != '1' )
+	    {
+	      fprintf (stderr, "ERROR, 'value' of bit must be 0 or 1\n");
+	      return -1;
+	    }
+	  
+	  switch ( *bit ) {
+	  case '0': if ( *val == '0' ) mod0dqflags |= 0x01; else mod1dqflags |= 0x01; break;
+	  case '1': if ( *val == '0' ) mod0dqflags |= 0x02; else mod1dqflags |= 0x02; break;
+	  case '2': if ( *val == '0' ) mod0dqflags |= 0x04; else mod1dqflags |= 0x04; break;
+	  case '3': if ( *val == '0' ) mod0dqflags |= 0x08; else mod1dqflags |= 0x08; break;
+	  case '4': if ( *val == '0' ) mod0dqflags |= 0x10; else mod1dqflags |= 0x10; break;
+	  case '5': if ( *val == '0' ) mod0dqflags |= 0x20; else mod1dqflags |= 0x20; break;
+	  case '6': if ( *val == '0' ) mod0dqflags |= 0x40; else mod1dqflags |= 0x40; break;
+	  case '7': if ( *val == '0' ) mod0dqflags |= 0x80; else mod1dqflags |= 0x80; break;
+	  default:  fprintf (stderr, "ERROR, unrecognized data quality flag bit: '%c'\n", *bit); return -1;
+	  }
+        }
+      else if (strcmp (argvec[optind], "--b100samprate") == 0)
+        {
+	  modb100samprate = strtod (getoptval(argcount, argvec, optind++) ,NULL);
+        }
+      else if (strcmp (argvec[optind], "--b1000encoding") == 0)
+        {
+	  modb1000enc = strtol (getoptval(argcount, argvec, optind++) ,NULL,10);
+	  
+	  if ( modb1000enc < 0 || modb1000enc > 31 ) {
+	    fprintf (stderr, "ERROR, unrecognized encoding format: '%d'\n", modb1000enc);
+	    return -1;
+	  }
+        }
+      else if (strcmp (argvec[optind], "--b1001tqual") == 0)
+        {
+	  modb1001tqual = strtol (getoptval(argcount, argvec, optind++) ,NULL,10);
+	  
+	  if ( modb1001tqual < 0 || modb1001tqual > 100 )
+	    {
+	      fprintf (stderr, "ERROR, timing quality must be 0 to 100\n");
+	      return -1;
+	    }
         }
       else if (strncmp (argvec[optind], "-", 1) == 0 &&
 	       strlen (argvec[optind]) > 1 )
@@ -530,8 +797,8 @@ getoptval (int argcount, char **argvec, int argopt)
     if ( strcmp (argvec[argopt+1], "-") == 0 )
       return argvec[argopt+1];
   
-  /* Special case of '--timedelta -X' */
-  if ( (argopt+1) < argcount && strcmp (argvec[argopt], "--timedelta") == 0 )
+  /* Special case of '--timeshift -X' */
+  if ( (argopt+1) < argcount && strcmp (argvec[argopt], "--timeshift") == 0 )
     if ( lisnumber(argvec[argopt+1]) )
       return argvec[argopt+1];
   
@@ -547,7 +814,8 @@ getoptval (int argcount, char **argvec, int argopt)
 /***************************************************************************
  * lisnumber:
  *
- * Test if the string is all digits allowing an initial minus sign.
+ * Test if the string is all digits allowing an initial minus sign and
+ * any number of dots (.).
  *
  * Return 0 if not a number otherwise 1.
  ***************************************************************************/
@@ -564,7 +832,7 @@ lisnumber (char *number)
           continue;
         }
 
-      if ( ! isdigit ((int) *(number+idx)) )
+      if ( ! isdigit ((int) *(number+idx)) && *(number+idx) != '.' )
         {
           return 0;
         }
@@ -775,7 +1043,7 @@ usage (int level)
 	   " -h           Show this usage message\n"
 	   " -H           Show usage message with 'format' details (see -A option)\n"
 	   " -v           Be more verbose, multiple flags can be used\n"
-	   " -sum         Print a basic summary after reading all input files\n"
+	   " -s           Print a basic summary after reading all input files\n"
 	   "\n"
 	   " ## Data selection options ##\n"
 	   " -ts time     Limit to records that start after time\n"
@@ -786,11 +1054,20 @@ usage (int level)
 	   "                Regular expressions are applied to: 'NET_STA_LOC_CHAN_QUAL'\n"
 	   "\n"
 	   " ## Modification options ##\n"
-	   " --timedelta secs  Shift the time base by a specified number of seconds\n"
-	   " --net code        Change the network code\n"
-	   " --sta code        Change the station code\n"
-	   " --loc id          Change the location id\n"
-	   " --chan codes      Change the channel codes\n"
+	   " --net code             Change the network code\n"
+	   " --sta code             Change the station code\n"
+	   " --loc id               Change the location id\n"
+	   " --chan codes           Change the channel codes\n"
+	   " --quality [DRQ]        Change the data record indicator/quality code\n"
+	   " --timeshift secs       Shift the time base by a specified number of seconds\n"
+	   " --samprate sps         Change the sample rate (both nominal and actual)\n"
+	   " --timecorr secs        Change the time correction value (not applied)\n"
+           " --actflags 'bit,value' Set or unset an activity flag bit\n"
+           " --ioflags 'bit,value'  Set or unset an I/O flag bit\n"
+           " --dqflags 'bit,value'  Set or unset a data quality flag bit\n"
+/*         " --b100samprate rate    Change the Blockette 100 actual sample rate field\n" */
+           " --b1000encoding enc    Change the Blockette 1000 data encoding format field\n"
+           " --b1001tqual percent   Change the Blockette 1001 timing quality field (0-100)\n"
            "\n"
 	   " ## Output options ##\n"
 	   " -o file      Specify a single output file\n"

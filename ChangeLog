@@ -1,1 +1,5 @@
+2006.282: 0.2
+	- Add modification of other fields like quality, samprate, etc.
+
 2006.279: 0.1
+	- Initial version, framework done and simple values modifiable.
