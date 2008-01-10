@@ -323,13 +323,13 @@ ds_streamproc (DataStream *datastream, MSRecord *msr, long suffix, int verbose)
 
   if (foundgroup != NULL)
     {
-      /* Write binary data samples to approriate file */
+      /* Write binary data samples to appropriate file */
       if ( msr->datasamples && msr->numsamples )
 	{
 	  if ( dsverbose >= 3 )
 	    fprintf (stderr, "Writing binary data samples to data stream file %s\n", filename);
 	  
-	  if ( !write (foundgroup->filed, msr->datasamples, msr->numsamples * get_samplesize(msr->sampletype)) )
+	  if ( !write (foundgroup->filed, msr->datasamples, msr->numsamples * ms_samplesize(msr->sampletype)) )
 	    {
 	      fprintf (stderr, "ds_streamproc: failed to write binary data samples\n");
 	      return -1;

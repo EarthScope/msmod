@@ -1,6 +1,7 @@
 2008.010: 0.3
 	- Update libmseed to 2.1.4.
 	- Add "M" quality to help message, support included in libmseed.
+	- Allow more flexible build by using user-supplied CFLAGS and CC.
 
 2006.282: 0.2
 	- Add modification of other fields like quality, samprate, etc.

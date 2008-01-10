@@ -6,7 +6,7 @@
  *
  * Written by Chad Trabant, IRIS Data Management Center.
  *
- * modified 2006.282
+ * modified 2008.010
  ***************************************************************************/
 
 /* Note to future hackers:
@@ -36,7 +36,7 @@
 
 #include "dsarchive.h"
 
-#define VERSION "0.2"
+#define VERSION "0.3"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
@@ -152,8 +152,8 @@ main ( int argc, char **argv )
             {
               if ( verbose >= 3 )
                 {
-                  msr_srcname (msr, srcname);
-                  ms_hptime2seedtimestr (msr->starttime, stime);
+                  msr_srcname (msr, srcname, 1);
+                  ms_hptime2seedtimestr (msr->starttime, stime, 1);
                   fprintf (stderr, "Skipping (starttime) %s, %s\n", srcname, stime);
                 }
               continue;
@@ -163,8 +163,8 @@ main ( int argc, char **argv )
             {
               if ( verbose >= 3 )
                 {
-                  msr_srcname (msr, srcname);
-                  ms_hptime2seedtimestr (msr->starttime, stime);
+                  msr_srcname (msr, srcname, 1);
+                  ms_hptime2seedtimestr (msr->starttime, stime, 1);
                   fprintf (stderr, "Skipping (starttime) %s, %s\n", srcname, stime);
                 }
               continue;
@@ -172,10 +172,9 @@ main ( int argc, char **argv )
           
           if ( match || reject )
             {
-              /* Generate the srcname and add the quality code */
-              msr_srcname (msr, basesrc);
-              snprintf (srcname, sizeof(srcname), "%s_%c", basesrc, msr->dataquality);
-              
+              /* Generate the srcname including the quality code */
+              msr_srcname (msr, basesrc, 1);
+	      
               /* Check if record is matched by the match regex */
               if ( match )
                 {
@@ -183,7 +182,7 @@ main ( int argc, char **argv )
                     {
                       if ( verbose >= 3 )
                         {
-                          ms_hptime2seedtimestr (msr->starttime, stime);
+                          ms_hptime2seedtimestr (msr->starttime, stime, 1);
                           fprintf (stderr, "Skipping (match) %s, %s\n", srcname, stime);
                         }
                       continue;
@@ -197,7 +196,7 @@ main ( int argc, char **argv )
                     {
                       if ( verbose >= 3 )
                         {
-                          ms_hptime2seedtimestr (msr->starttime, stime);
+                          ms_hptime2seedtimestr (msr->starttime, stime, 1);
                           fprintf (stderr, "Skipping (reject) %s, %s\n", srcname, stime);
                         }
                       continue;
@@ -220,7 +219,7 @@ main ( int argc, char **argv )
 	    }
 
 	  /* Repack header into record */
-	  if ( msr_pack_header (msr, verbose-1) < 0 )
+	  if ( msr_pack_header (msr, 1, verbose-1) < 0 )
 	    {
 	      fprintf (stderr, "ERROR packing header for:\n  ");
 	      msr_print (msr, verbose-1);
@@ -263,7 +262,7 @@ main ( int argc, char **argv )
       /* Print error if not EOF and not counting down records */
       if ( retcode != MS_ENDOFFILE )
         fprintf (stderr, "Error reading %s: %s\n",
-                 flp->filename, get_errorstr(retcode));
+                 flp->filename, ms_errorstr(retcode));
       
       /* Make sure everything is cleaned up */
       ms_readmsr (&msr, NULL, 0, NULL, NULL, 0, 0, 0);
@@ -1058,7 +1057,7 @@ usage (int level)
 	   " --sta code             Change the station code\n"
 	   " --loc id               Change the location id\n"
 	   " --chan codes           Change the channel codes\n"
-	   " --quality [DRQ]        Change the data record indicator/quality code\n"
+	   " --quality [DRQM]       Change the data record indicator/quality code\n"
 	   " --timeshift secs       Shift the time base by a specified number of seconds\n"
 	   " --samprate sps         Change the sample rate (both nominal and actual)\n"
 	   " --timecorr secs        Change the time correction value (not applied)\n"
