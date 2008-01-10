@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
 #include <time.h>
@@ -64,15 +65,16 @@ static int readregexfile (char *regexfile, char **pppattern);
 static void freefilelist (void);
 static void usage (int level);
 
-static flag     verbose       = 0;
-static flag     basicsum      = 0;    /* Controls printing of basic summary */
-static int      reclen        = -1;   /* Input data record length, autodetected in most cases */
-static hptime_t starttime     = HPTERROR;  /* Limit to records after starttime */
-static hptime_t endtime       = HPTERROR;  /* Limit to records before endtime */
-static regex_t *match         = 0;    /* Compiled match regex */
-static regex_t *reject        = 0;    /* Compiled reject regex */
-static char    *outputfile    = 0;    /* Single output file */
-static Archive *archiveroot   = 0;    /* Output file structures */
+static flag     verbose        = 0;
+static flag     basicsum       = 0;    /* Controls printing of basic summary */
+static int      reclen         = -1;   /* Input data record length, autodetected in most cases */
+static hptime_t starttime      = HPTERROR;  /* Limit to records after starttime */
+static hptime_t endtime        = HPTERROR;  /* Limit to records before endtime */
+static regex_t *match          = 0;    /* Compiled match regex */
+static regex_t *reject         = 0;    /* Compiled reject regex */
+static char    *outputfile     = 0;    /* Single output file */
+static Archive *archiveroot    = 0;    /* Output file structures */
+static flag     overwriteinput = 0;    /* Overwrite input records after modifying */
 static Filelink *filelist = 0;
 
 /* Modification specifiers */
@@ -111,9 +113,10 @@ main ( int argc, char **argv )
   char basesrc[50];
   char srcname[50];
   char stime[30];
-
+  
+  int writefd = 0;
   Archive *arch;
-
+  
   /* Process input parameters */
   if (processparam (argc, argv) < 0)
     return -1;
@@ -139,6 +142,17 @@ main ( int argc, char **argv )
     {
       if ( verbose >= 2 )
 	fprintf (stderr, "Processing: %s\n", flp->filename);
+      
+      /* Open input file for writing if overwriting and not using stdin */
+      if ( overwriteinput && strcmp (flp->filename, "_") )
+	{
+	  if ( (writefd = open (flp->filename, O_WRONLY, 0)) == -1 )
+	    {
+	      fprintf (stderr, "Error opening %s for overwriting: %s\n",
+		       flp->filename, strerror(errno));
+	      flp = flp->next;
+	    }
+	}
       
       /* Loop over the input file */
       for (;;)
@@ -227,6 +241,17 @@ main ( int argc, char **argv )
 	      break;
 	    }
 	  
+	  /* Replace input record if specified */
+	  if ( overwriteinput && writefd )
+	    {
+	      if ( pwrite (writefd, msr->record, msr->reclen, filepos) != msr->reclen )
+		{
+		  fprintf (stderr, "ERROR overwriting record in %s: %s\n",
+			   flp->filename, strerror(errno));
+		  break;
+		}
+	    }
+	  
 	  /* Write to a single output file if specified */
 	  if ( ofp )
 	    {
@@ -263,6 +288,13 @@ main ( int argc, char **argv )
       if ( retcode != MS_ENDOFFILE )
         fprintf (stderr, "Error reading %s: %s\n",
                  flp->filename, ms_errorstr(retcode));
+      
+      /* Close input file for overwriting */
+      if ( writefd )
+	{
+	  close (writefd);
+	  writefd = 0;
+	}
       
       /* Make sure everything is cleaned up */
       ms_readmsr (&msr, NULL, 0, NULL, NULL, 0, 0, 0);
@@ -708,7 +740,13 @@ processparam (int argcount, char **argvec)
       fprintf (stderr, "Try %s -h for usage\n", PACKAGE);
       exit (1);
     }
-
+  
+  /* Overwrite input data records if no output file(s) specified */
+  if ( ! outputfile && ! archiveroot )
+    {
+      overwriteinput = 1;
+    }
+  
   /* Expand match pattern from a file if prefixed by '@' */
   if ( matchpattern )
     {
@@ -1073,6 +1111,9 @@ usage (int level)
 	   " -A format    Write all records is a custom directory/file layout (try -H)\n"
            "\n"
 	   " file#        Files(s) of Mini-SEED records for input\n"
+	   "\n"
+	   " Input data files will be overwritten if no output options are specified\n"
+	   " and the input is not stdin.\n"
 	   "\n");
   
   if  ( level )

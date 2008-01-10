@@ -1,20 +1,21 @@
 .TH MSMOD 1 2008/01/10
 .SH NAME
-Mini-SEED Modifier - perform stream- Mini-SEED modifications
+Mini-SEED Modifier - perform stream-based Mini-SEED modifications
 
 .SH SYNOPSIS
 .nf
-msi [options] file1 [file2 file3 ...]
+msmod [options] file1 [file2 file3 ...]
 
 .fi
 .SH DESCRIPTION
-\fBmsi\fP is a general purpose Mini-SEED parser.  In addition to
-parsing and displaying the contents of Mini-SEED records, \fBmsi\fP
-will derive continuous trace information for Mini-SEED data.
+\fBmsmod\fP is a general purpose Mini-SEED modification processor.
+Mini-SEED records are read from each input file and modified as
+specified and written back out in a serial-manner.  Each modification
+is applied to all processed records.
 
-By default, \fBmsi\fP will output a single line of information to
-summarize each record parsed.  More verbose or different output can be
-specified via the numerous options.
+If no output options are specified and the input is not stdin
+\fBmsmod\fP will overwrite the input files, modifying the records
+in-place.
 
 If '-' is specified standard input will be read.  Multiple input files
 will be processed in the order specified.
@@ -27,21 +28,17 @@ records all of the headers will be skipped and completely unprocessed.
 .IP "-V         "
 Print program version and exit.
 
-.IP "-h         "
-Print program usage and exit.
+.IP "-h/-H      "
+Print program usage and exit, if -H is specified additional details
+regarding output to user-defined archive structures (see -A).
 
 .IP "-v         "
 Be more verbose.  This flag can be used multiple times ("-v -v" or
 "-vv") for more verbosity.
 
-.IP "-r \fIreclen\fP"
-Specify the input record length in bytes.  By default the
-record length of each input Mini-SEED record is automatically
-detected, this option forces the record length.
-
-.IP "-e \fIencoding\fP"
-Specify the data encoding format.  These encoding values are the same
-as those specified in the SEED 1000 Blockette.
+.IP "-s         "
+Print a basic summary including the number of records and the number
+of samples they included after processing all input records.
 
 .IP "-ts \fItime\fP"
 Limit processing to Mini-SEED records that start after \fItime\fP.
@@ -67,93 +64,154 @@ Limit processing to Mini-SEED records that do not match the
 string composed of 'NET_STA_LOC_CHAN_QUAL' is created and compared to
 the regular expression.
 
-.IP "-n \fIcount\fP"
-Only process \fIcount\fP input records.
-
-.IP "-p         "
-Print details of each record header.  This flag can be used multiple
-times ("-p -p" or "-pp") for more verbosity.  Specifying two flags
-will result in all header details being printed.
-
-.IP "-O         "
-Include the offset into the file in bytes when printing header
-details.
-
-.IP "-s         "
-Print a basic summary including the number of records and the number
-of samples they included after processing all input records.
-
-.IP "-d          "
-Decompress/unpack data in input records and print the first 6 sample
-values from each record.
-
-.IP "-D          "
-Decompress/unpack data in input records and print all the sample
-values.
-
-.IP "-t         "
-Print a sorted trace list after processing all input records.
-
-.IP "-T         "
-Print a sorted trace list after processing all input records and
-suppress record-by-record output, i.e. trace list only.
-
-.IP "-tg        "
-Include gap estimates when approriate in trace listings.
-
-.IP "-tt \fIsecs\fP"
-Specify a time tolerance for constructing continous trace
-segments. The tolerance is specified in seconds.  The default
-tolerance is 1/2 of the sample period.
-
-.IP "-rt \fIdiff\fP"
-Specify a sample rate tolerance for constructing continous trace
-segments. The tolerance is specified as the difference between two
-sampling rates.  The default tolerance is tested as: (abs(1-sr1/sr2) <
-0.0001).
-
-.IP "-g         "
-Print a sorted gap/overlap list after processing all input records.
-
-.IP "-G         "
-Print a sorted gap/overlap list after processing all input records and
-suppress record-by-record output, i.e. gap list only.
-
-.IP "-min \fIsec\fP"
-Only include gaps in the gap list larger or equal to \fIsec\fP number
-of seconds.
-
-.IP "-max \fIsec\fP"
-Only include gaps in the gap list smaller or equal to \fIsec\fP number
-of seconds.
-
-.IP "-Q         "
-Additionally group input data based on SEED data qualitiy flags.  By
-default data are grouped by network, station, location, channel and
-adjacent time windows, this option adds data quality to the grouping
-parameters.
-
-.IP "-H         "
-Heal trace segments when printing trace or gap/overlap lists.  When
-Mini-SEED records are read out of time order continuous trace segments
-might be split into multiple segments.  This option attempts to "heal"
-all such segments together.
-
-.IP "-tf \fIformat\fP"
-Specify the time stamp format for trace and gap/overlap lists.  The
-\fIformat\fP can be one of the following (default = 0):
-.nf
-  0 = SEED time, e.g. "2005,068,00:00:01.000000"
-  1 = ISO time, e.g. "2005-03-09T00:00:01.000000"
-  2 = Epoch seconds, e.g. "1110326401.000000"
-.fi
-
-.IP "-b \fIbinfile\fP"
-Decompress/unpack data in input records and write the binary samples
-to \fIbinfile\fP.
-
 .IP "-o \fIoutfile\fP"
 Write all processed Mini-SEED records to \fIoutfile\fP.
+
+.IP "-A \fIformat\fR"
+All output records will be written to a directory/file layout defined
+by \fIformat\fP.  All directories implied in the \fIformat\fP string
+will be created if necessary.  The option may be used multiple times
+to write input records to multiple archives.  See the \fBArchive
+Format\fR section below.
+
+.IP "--net code"
+Specify a new network code.
+
+.IP "--sta code"
+Specify a new station code.
+
+.IP "--loc id"
+Specify a new location id.
+
+.IP "--chan codes"
+Specify new channel codes.
+
+.IP "--quality [DRMQ]"
+Specify a new header/quality identifier, can be either 'D', 'R', 'M',
+or 'Q'.
+
+.IP "--timeshift secs"
+Specify a time shift in seconds to apply to record start times.  This
+value can be positive or negative.
+
+.IP "--samprate sps"
+Specify new sampling rate in samples per second.  This will be applied
+to both the nominal and actual (if present) sampling rate fields.
+
+.IP "--timecorr secs"
+Specify a timing correction.  This correction will be applied to the
+record start time and bit 1 of the activity flags (field 12) will be
+set to indicate the correction has been applied.
+
+.IP "--actflags bit,value"
+Specify an activity flag by indicating the bit to change and it's
+value.  Valid bit ranges are 0 to 6 and valid bit values are 0 and 1.
+Activity flags are defined in the SEED 2.4 manual as follows:
+
+.nf
+  \fB[Bit 0]\fP : Calibration signals preset
+  \fB[Bit 1]\fP : Time correction applied
+  \fB[Bit 2]\fP : Beginning of an event, station trigger
+  \fB[Bit 3]\fP : End of the event, station detriggers
+  \fB[Bit 4]\fP : A positive leap second happended during this record
+  \fB[Bit 5]\fP : A negative leap second happended during this record
+  \fB[Bit 6]\fP : Event in progress
+.fi
+
+.IP "--ioflags bit,value"
+Specify an I/O flag by indicating the bit to change and it's value.
+Valid bit ranges are 0 to 5 and valid bit values are 0 and 1.  I/O
+flags are defined in the SEED 2.4 manual as follows:
+
+.nf
+  \fB[Bit 0]\fP : Station volume parity error possibly present
+  \fB[Bit 1]\fP : Long record read (possibly no problem)
+  \fB[Bit 2]\fP : Short record read (record padded)
+  \fB[Bit 3]\fP : Start of time series
+  \fB[Bit 4]\fP : End of time series
+  \fB[Bit 5]\fP : Clock locked
+.fi
+
+.IP "--dqflags bit,value"
+Specify a data quality flag by indicating the bit to change and it's
+value.  Valid bit ranges are 0 to 7 and valid bit values are 0 and 1.
+Data quality flags are defined in the SEED 2.4 manual as follows:
+
+.nf
+  \fB[Bit 0]\fP : Amplifier saturation detected (station dependent)
+  \fB[Bit 1]\fP : Digitizer clipping detected
+  \fB[Bit 2]\fP : Spikes detected
+  \fB[Bit 3]\fP : Glitches detected
+  \fB[Bit 4]\fP : Missing/padded data preset
+  \fB[Bit 5]\fP : Telementry synchronization error
+  \fB[Bit 6]\fP : A digital filter may be charging
+  \fB[Bit 7]\fP : Time tag is questionable
+.fi
+
+.IP "--b1000encoding encoding"
+Chanage the Blockette 1000 data encoding format field.  Valid values
+are included in the SEED manual documentation for Blockette 1000.
+
+.IP "--b1001tqual percent"
+Chanage the Blockette 1001 timing quality field, valid values are 0 to
+100 percent.  Further description is included in the SEED manual
+documentation for Blockette 1001.
+
+.SH "Archive Format"
+An archive format is expanded for each record using the following
+substitution flags:
+
+.nf
+  \fBn\fP : network code, white space removed
+  \fBs\fP : station code, white space removed
+  \fBl\fP : location code, white space removed
+  \fBc\fP : channel code, white space removed
+  \fBY\fP : year, 4 digits
+  \fBy\fP : year, 2 digits zero padded
+  \fBj\fP : day of year, 3 digits zero padded
+  \fBH\fP : hour, 2 digits zero padded
+  \fBM\fP : minute, 2 digits zero padded
+  \fBS\fP : second, 2 digits zero padded
+  \fBF\fP : fractional seconds, 4 digits zero padded
+  \fBq\fP : single character record quality indicator (D, R, Q)
+  \fBL\fP : data record length in bytes
+  \fBr\fP : sample rate (Hz) as a rounded integer
+  \fBR\fP : sample rate (Hz) as a float with 6 digit precision
+  \fB%\fP : the percent (%) character
+  \fB#\fP : the number (#) character
+.fi
+
+The flags are prefaced with either the \fB%\fP or \fB#\fP modifier.
+The \fB%\fP modifier indicates a defining flag while the \fB#\fP
+indicates a non-defining flag.  All records with the same set of
+defining flags will be written to the same file.  Non-defining flags
+will be expanded using the values in the first record for the
+resulting file name.
+
+Time flags are based on the start time of the given record.
+
+.SH "Archive format examples"
+
+The format string for the predefined \fIBUD\fP layout:
+
+\fB/archive/%n/%s/%s.%n.%l.%c.%Y.%j\fP
+
+would expand to day length files named something like:
+
+\fB/archive/NL/HGN/HGN.NL..BHE.2003.055\fP
+
+As an example of using non-defining flags the format string for the
+predefined \fICSS\fP layout:
+
+\fB/data/%Y/%j/%s.%c.%Y:%j:#H:#M:#S\fP
+
+would expand to:
+
+\fB/data/2003/055/HGN.BHE.2003:055:14:17:54\fP
+
+resulting in day length files because the hour, minute and second are
+specified with the non-defining modifier.  The hour, minute and second
+fields are from the first record in the file.
 
 .SH AUTHOR
 .nf

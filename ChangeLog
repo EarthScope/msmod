@@ -1,5 +1,6 @@
 2008.010: 0.3
 	- Update libmseed to 2.1.4.
+	- Overwrite input data files if no output files are specified.
 	- Add "M" quality to help message, support included in libmseed.
 	- Allow more flexible build by using user-supplied CFLAGS and CC.
 
