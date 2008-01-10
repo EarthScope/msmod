@@ -13,10 +13,6 @@ Mini-SEED records are read from each input file and modified as
 specified and written back out in a serial-manner.  Each modification
 is applied to all processed records.
 
-If no output options are specified and the input is not stdin
-\fBmsmod\fP will overwrite the input files, modifying the records
-in-place.
-
 If '-' is specified standard input will be read.  Multiple input files
 will be processed in the order specified.
 
@@ -64,8 +60,13 @@ Limit processing to Mini-SEED records that do not match the
 string composed of 'NET_STA_LOC_CHAN_QUAL' is created and compared to
 the regular expression.
 
+.IP "-i           "
+Modify input records in-place by writing modified records back to the
+input files.
+
 .IP "-o \fIoutfile\fP"
 Write all processed Mini-SEED records to \fIoutfile\fP.
+
 
 .IP "-A \fIformat\fR"
 All output records will be written to a directory/file layout defined

@@ -544,6 +544,10 @@ processparam (int argcount, char **argvec)
 	{
 	  rejectpattern = getoptval(argcount, argvec, optind++);
 	}
+      else if (strcmp (argvec[optind], "-i") == 0)
+        {
+          overwriteinput = 1;
+        }
       else if (strcmp (argvec[optind], "-o") == 0)
         {
           outputfile = getoptval(argcount, argvec, optind++);
@@ -742,9 +746,12 @@ processparam (int argcount, char **argvec)
     }
   
   /* Overwrite input data records if no output file(s) specified */
-  if ( ! outputfile && ! archiveroot )
+  if ( ! outputfile && ! archiveroot && ! overwriteinput )
     {
-      overwriteinput = 1;
+      fprintf (stderr, "No output options were specified\n\n");
+      fprintf (stderr, "%s version %s\n\n", PACKAGE, VERSION);
+      fprintf (stderr, "Try %s -h for usage\n", PACKAGE);
+      exit (1);
     }
   
   /* Expand match pattern from a file if prefixed by '@' */
@@ -1107,13 +1114,11 @@ usage (int level)
            " --b1001tqual percent   Change the Blockette 1001 timing quality field (0-100)\n"
            "\n"
 	   " ## Output options ##\n"
+	   " -i           Modify the input files in-place\n"
 	   " -o file      Specify a single output file\n"
 	   " -A format    Write all records is a custom directory/file layout (try -H)\n"
            "\n"
 	   " file#        Files(s) of Mini-SEED records for input\n"
-	   "\n"
-	   " Input data files will be overwritten if no output options are specified\n"
-	   " and the input is not stdin.\n"
 	   "\n");
   
   if  ( level )
