@@ -37,7 +37,7 @@
 
 #include "dsarchive.h"
 
-#define VERSION "0.3"
+#define VERSION "0.4"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
@@ -110,7 +110,7 @@ main ( int argc, char **argv )
   long long int totalfiles = 0;
   long long int totalrecs  = 0;
 
-  char basesrc[50];
+  char matchsrc[50];
   char srcname[50];
   char stime[30];
   
@@ -187,12 +187,12 @@ main ( int argc, char **argv )
           if ( match || reject )
             {
               /* Generate the srcname including the quality code */
-              msr_srcname (msr, basesrc, 1);
+              msr_srcname (msr, matchsrc, 1);
 	      
               /* Check if record is matched by the match regex */
               if ( match )
                 {
-                  if ( regexec ( match, srcname, 0, 0, 0) != 0 )
+                  if ( regexec ( match, matchsrc, 0, 0, 0) != 0 )
                     {
                       if ( verbose >= 3 )
                         {
@@ -206,7 +206,7 @@ main ( int argc, char **argv )
               /* Check if record is rejected by the reject regex */
               if ( reject )
                 {
-                  if ( regexec ( reject, srcname, 0, 0, 0) == 0 )
+                  if ( regexec ( reject, matchsrc, 0, 0, 0) == 0 )
                     {
                       if ( verbose >= 3 )
                         {
