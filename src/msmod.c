@@ -6,7 +6,7 @@
  *
  * Written by Chad Trabant, IRIS Data Management Center.
  *
- * modified 2008.010
+ * modified 2008.176
  ***************************************************************************/
 
 /* Note to future hackers:
@@ -37,7 +37,7 @@
 
 #include "dsarchive.h"
 
-#define VERSION "0.4"
+#define VERSION "0.5dev"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
@@ -84,8 +84,9 @@ static char    *modloc          = 0;
 static char    *modchan         = 0;
 static char     modquality      = 0;
 static double   modtimeshift    = 0;
+static double   modtimecorr     = 0;
+static double   modtimecorrval  = 0;
 static double   modsamprate     = 0;
-static int      modtimecorr     = 0;
 static char     mod0actflags    = 0;
 static char     mod1actflags    = 0;
 static char     mod0ioflags     = 0;
@@ -361,10 +362,20 @@ processmods (MSRecord *msr)
     }
   
   /* Modify time tag */
-  if ( modtimeshift )
+  if ( modtimeshift && msr->fsdh )
     {
       if ( verbose > 1 )
-	fprintf (stderr, "Shifting record starttime by %g seconds\n", modtimeshift);
+	fprintf (stderr, "Shifting record start time by %g seconds\n", modtimeshift);
+      
+      /* Apply time shift to starttime */
+      msr->starttime += (hptime_t) (modtimeshift * HPTMODULUS);
+    }
+  
+  /* Modify time correction value and apply to the time tag */
+  if ( modtimecorr && msr->fsdh )
+    {
+      if ( verbose > 1 )
+	fprintf (stderr, "Applying time correction of %g seconds\n", modtimeshift);
       
       if ( verbose && msr->fsdh->time_correct && ! (msr->fsdh->act_flags & 0x02) )
 	fprintf (stderr, "Warning, applying time correction over another time correction\n");
@@ -373,27 +384,25 @@ processmods (MSRecord *msr)
       msr->fsdh->act_flags |= 0x02;
       
       /* Set the time correction field, value is units of 0.0001 seconds */
-      msr->fsdh->time_correct = modtimeshift * 10000;
+      msr->fsdh->time_correct = modtimecorr * 10000;
       
       /* Apply time shift to starttime */
-      msr->starttime += (hptime_t) (modtimeshift * HPTMODULUS);
+      msr->starttime += (hptime_t) (modtimecorr * HPTMODULUS);
     }
-
+  
+  /* Modify time correction value without applying to the time tag */
+  if ( modtimecorrval && msr->fsdh )
+    {
+      /* Set the time correction field, value is units of 0.0001 seconds */
+      msr->fsdh->time_correct = modtimecorrval * 10000;
+    }
+  
   /* Modify sampling rate */
   if ( modsamprate )
     {
       msr->samprate = modsamprate;
     }
   
-  /* Modify time correction */
-  if ( modtimecorr )
-    {
-      if ( msr->fsdh )
-	msr->fsdh->time_correct = modtimecorr;
-      else
-	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
-    }
-
   /* Modify activity flags */
   if ( mod0actflags )
     {
@@ -496,7 +505,6 @@ processparam (int argcount, char **argvec)
   char *rejectpattern = 0;
   char *tptr;
   char *bit,*val;
-  double tdbl;
   
   /* Process all command line arguments */
   for (optind = 1; optind < argcount; optind++)
@@ -562,6 +570,11 @@ processparam (int argcount, char **argvec)
           if ( addarchive(getoptval(argcount, argvec, optind++), CHANLAYOUT) == -1 )
             return -1;
         }
+      else if (strcmp (argvec[optind], "-QCHAN") == 0)
+        {
+          if ( addarchive(getoptval(argcount, argvec, optind++), QCHANLAYOUT) == -1 )
+            return -1;
+        }
       else if (strcmp (argvec[optind], "-CDAY") == 0)
         {
           if ( addarchive(getoptval(argcount, argvec, optind++), CDAYLAYOUT) == -1 )
@@ -605,14 +618,17 @@ processparam (int argcount, char **argvec)
         {
 	  modtimeshift = strtod (getoptval(argcount, argvec, optind++) ,NULL);
         }
+      else if (strcmp (argvec[optind], "--timecorr") == 0)
+        {
+	  modtimecorr = strtod (getoptval(argcount, argvec, optind++) ,NULL);
+        }
+      else if (strcmp (argvec[optind], "--timecorrval") == 0)
+        {
+	  modtimecorrval = strtod (getoptval(argcount, argvec, optind++) ,NULL);
+        }
       else if (strcmp (argvec[optind], "--samprate") == 0)
         {
 	  modsamprate = strtod (getoptval(argcount, argvec, optind++) ,NULL);
-        }
-      else if (strcmp (argvec[optind], "--timecorr") == 0)
-        {
-	  tdbl = strtod (getoptval(argcount, argvec, optind++) ,NULL);
-	  modtimecorr = tdbl * 10000;
         }
       else if (strcmp (argvec[optind], "--actflags") == 0)
         {
@@ -1104,8 +1120,9 @@ usage (int level)
 	   " --chan codes           Change the channel codes\n"
 	   " --quality [DRQM]       Change the data record indicator/quality code\n"
 	   " --timeshift secs       Shift the time base by a specified number of seconds\n"
+	   " --timecorr secs        Change the time correction and apply to the time stamp\n"
+	   " --timecorrval secs     Change the time correction value (not applied)\n"
 	   " --samprate sps         Change the sample rate (both nominal and actual)\n"
-	   " --timecorr secs        Change the time correction value (not applied)\n"
            " --actflags 'bit,value' Set or unset an activity flag bit\n"
            " --ioflags 'bit,value'  Set or unset an I/O flag bit\n"
            " --dqflags 'bit,value'  Set or unset a data quality flag bit\n"
@@ -1127,6 +1144,7 @@ usage (int level)
                "\n"
 	       "  # Preset format layouts #\n"
 	       " -CHAN dir    Write all records into separate Net.Sta.Loc.Chan files\n"
+	       " -QCHAN dir   Write all records into separate Net.Sta.Loc.Chan.Quality files\n"
 	       " -CDAY dir    Write all records into separate Net.Sta.Loc.Chan-day files\n"
 	       " -BUD BUDdir  Write all records in a BUD file layout\n"
 	       " -CSS CSSdir  Write all records in a CSS-like file layout\n"

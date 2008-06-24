@@ -1,4 +1,4 @@
-.TH MSMOD 1 2008/01/10
+.TH MSMOD 1 2008/06/24
 .SH NAME
 Mini-SEED Modifier - perform stream-based Mini-SEED modifications
 
@@ -67,7 +67,6 @@ input files.
 .IP "-o \fIoutfile\fP"
 Write all processed Mini-SEED records to \fIoutfile\fP.
 
-
 .IP "-A \fIformat\fR"
 All output records will be written to a directory/file layout defined
 by \fIformat\fP.  All directories implied in the \fIformat\fP string
@@ -93,16 +92,24 @@ or 'Q'.
 
 .IP "--timeshift secs"
 Specify a time shift in seconds to apply to record start times.  This
-value can be positive or negative.
+value can be positive or negative and is not stored in the record as a
+time correction.
+
+.IP "--timecorr secs"
+Change the value of the time correction field in the headers and apply
+the correction to the record start times.  This is similar to
+\fI--timecorr\fP except that the correction is stored in the header
+and bit 1 of the activity flags (field 12) will be set to indicate the
+correction has been applied.
+
+.IP "--timecorrval secs"
+Change the value of the time correction field in the headers without
+applying the change to the record start times.  Bit 1 of the activity
+flags (field 12) will not be changed.
 
 .IP "--samprate sps"
 Specify new sampling rate in samples per second.  This will be applied
 to both the nominal and actual (if present) sampling rate fields.
-
-.IP "--timecorr secs"
-Specify a timing correction.  This correction will be applied to the
-record start time and bit 1 of the activity flags (field 12) will be
-set to indicate the correction has been applied.
 
 .IP "--actflags bit,value"
 Specify an activity flag by indicating the bit to change and it's
