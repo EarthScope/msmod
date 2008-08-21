@@ -5,6 +5,7 @@
 	- Rework and document the --timeshift and --timecorr options.
 	- Use normalized (time correction applied) start time when
 	writing records to user defined archive files.
+	- Add QCHAN archive format preset.
 
 2008.086: 0.4
 	- Fix source name matching and rejecting.
