@@ -1,5 +1,5 @@
-2008.176: 0.5
-	- Update to libmseed 2.1.5.
+2008.234: 0.5
+	- Update to libmseed 2.1.6.
 	- Add --timecorrval option that only changes time correction
 	values, the corrections will not be applied to the time tag.
 	- Rework and document the --timeshift and --timecorr options.
