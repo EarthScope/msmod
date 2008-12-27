@@ -1,4 +1,4 @@
-.TH MSMOD 1 2008/06/24
+.TH MSMOD 1 2008/12/19
 .SH NAME
 Mini-SEED Modifier - perform stream-based Mini-SEED modifications
 
@@ -15,6 +15,14 @@ is applied to all processed records.
 
 If '-' is specified standard input will be read.  Multiple input files
 will be processed in the order specified.
+
+The header of each record processed is repacked regardless of selected
+modifications, this repacking includes normalization of the sampling
+rate fields (e.g. a factor of 32760 and multiplier of -819 will be
+converted to a factor of 40 and multiplier of 1).  The repacking might
+also change the offsets to any included blockettes if they were not
+packed in tight sequence, the order of the blockettes will be
+preserved.
 
 When a input file is full SEED including both SEED headers and data
 records all of the headers will be skipped and completely unprocessed.
@@ -106,6 +114,11 @@ correction has been applied.
 Change the value of the time correction field in the headers without
 applying the change to the record start times.  Bit 1 of the activity
 flags (field 12) will not be changed.
+
+.IP "--applytimecorr"
+Apply the time correction value to the record start time if it has not
+previously been applied and set bit 1 of the activity flags (field 12)
+to indicate the correction has been applied.
 
 .IP "--samprate sps"
 Specify new sampling rate in samples per second.  This will be applied

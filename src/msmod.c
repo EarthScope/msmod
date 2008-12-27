@@ -6,7 +6,7 @@
  *
  * Written by Chad Trabant, IRIS Data Management Center.
  *
- * modified 2008.176
+ * modified 2008.354
  ***************************************************************************/
 
 /* Note to future hackers:
@@ -37,7 +37,7 @@
 
 #include "dsarchive.h"
 
-#define VERSION "0.5"
+#define VERSION "0.6"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
@@ -86,6 +86,7 @@ static char     modquality      = 0;
 static double   modtimeshift    = 0;
 static double   modtimecorr     = 0;
 static double   modtimecorrval  = 0;
+static char     modtimecorrapp  = 0;
 static double   modsamprate     = 0;
 static char     mod0actflags    = 0;
 static char     mod1actflags    = 0;
@@ -193,7 +194,7 @@ main ( int argc, char **argv )
               /* Check if record is matched by the match regex */
               if ( match )
                 {
-                  if ( regexec ( match, matchsrc, 0, 0, 0) != 0 )
+                  if ( regexec (match, matchsrc, 0, 0, 0) != 0 )
                     {
                       if ( verbose >= 3 )
                         {
@@ -207,7 +208,7 @@ main ( int argc, char **argv )
               /* Check if record is rejected by the reject regex */
               if ( reject )
                 {
-                  if ( regexec ( reject, matchsrc, 0, 0, 0) == 0 )
+                  if ( regexec (reject, matchsrc, 0, 0, 0) == 0 )
                     {
                       if ( verbose >= 3 )
                         {
@@ -224,6 +225,12 @@ main ( int argc, char **argv )
               msr_print (msr, verbose-1);
             }
 	  
+	  /* Revert time to uncorrected value if correction was applied during unpacking */
+	  if ( msr->fsdh->time_correct != 0 && ! (msr->fsdh->act_flags & 0x02) )
+	    {
+	      msr->starttime = msr_starttime_uc (msr);
+	    }
+	  
 	  /* Perform modifications to record header */
 	  if ( processmods (msr) ) 
 	    {
@@ -232,7 +239,7 @@ main ( int argc, char **argv )
 	      stopflag = 1;
 	      break;
 	    }
-
+	  
 	  /* Repack header into record */
 	  if ( msr_pack_header (msr, 1, verbose-1) < 0 )
 	    {
@@ -378,7 +385,7 @@ processmods (MSRecord *msr)
 	fprintf (stderr, "Applying time correction of %g seconds\n", modtimeshift);
       
       if ( verbose && msr->fsdh->time_correct && ! (msr->fsdh->act_flags & 0x02) )
-	fprintf (stderr, "Warning, applying time correction over another time correction\n");
+	fprintf (stderr, "Warning, setting time correction over an unapplied value\n");
       
       /* Set the time correction applied flag (bit 1 of the activitiy flags) */
       msr->fsdh->act_flags |= 0x02;
@@ -395,6 +402,18 @@ processmods (MSRecord *msr)
     {
       /* Set the time correction field, value is units of 0.0001 seconds */
       msr->fsdh->time_correct = modtimecorrval * 10000;
+    }
+  
+  /* Apply time correction value to the time tag */
+  if ( modtimecorrapp && msr->fsdh )
+    {
+      /* Check if time correction field is set and if it's been applied */
+      if ( msr->fsdh->time_correct != 0 && ! (msr->fsdh->act_flags & 0x02) )
+	{
+	  /* Set time to corrected value and set the time correction flag */
+	  msr->starttime = msr_starttime(msr);
+	  msr->fsdh->act_flags |= 0x02;
+	}
     }
   
   /* Modify sampling rate */
@@ -625,6 +644,10 @@ processparam (int argcount, char **argvec)
       else if (strcmp (argvec[optind], "--timecorrval") == 0)
         {
 	  modtimecorrval = strtod (getoptval(argcount, argvec, optind++) ,NULL);
+        }
+      else if (strcmp (argvec[optind], "--applytimecorr") == 0)
+        {
+	  modtimecorrapp = 1;
         }
       else if (strcmp (argvec[optind], "--samprate") == 0)
         {
@@ -1122,6 +1145,7 @@ usage (int level)
 	   " --timeshift secs       Shift the time base by a specified number of seconds\n"
 	   " --timecorr secs        Change the time correction and apply to the time stamp\n"
 	   " --timecorrval secs     Change the time correction value (not applied)\n"
+	   " --applytimecorr        Apply the time correction if not already applied\n"
 	   " --samprate sps         Change the sample rate (both nominal and actual)\n"
            " --actflags 'bit,value' Set or unset an activity flag bit\n"
            " --ioflags 'bit,value'  Set or unset an I/O flag bit\n"

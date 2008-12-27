@@ -1,3 +1,9 @@
+2008.353: 0.6
+	- Add --applytimecorr option to specifically apply the time
+	correction value to the time tag and set the correction applied
+	flag.
+	- Do not apply time corrections to processed records by default.
+
 2008.234: 0.5
 	- Update to libmseed 2.1.6.
 	- Add --timecorrval option that only changes time correction
