@@ -1,3 +1,30 @@
+2009.201: 2.3
+	- msr_unpack(): change new blockette count and data offset
+	test failures to "Warning" instead of "ERROR".
+
+2009.194: 2.3rc
+	- Fix record offset reporting when record length detection fails.
+	- Add diagnostic reporting of data problems in ms_readmsr_r()
+	by calling ms_parse_raw().
+
+2009.174: 
+	- Fix corner case trace sorting error in mstl_addmsr().
+	- Add ms_nomsamprate() to genutils.c to calculate the sample rate
+	specified as a SEED sample rate factor and multiplier.
+	- Add ms_parse_raw() implementing a simple validating parser
+	to report invalid header values and print raw header fields.
+	- msr_unpack(): add tests for blockette count and data offset.
+	- Change byte swapping test of year to 1920 to 2050 range.
+	- Store blockette offset in BlktLink structure.
+
+2009.111: 2.2
+	- Add CDSN decoding support due to popular demand.
+	- Incorporate enhanced dynamic library versioning as recommended
+	by Laurence Withers.
+	- Fix bug in ASCII encoding routine, thanks again Laurence Withers.
+	- Add and update libmseed.def which can be used with the Win32 DLL
+	for linking, original file contributed by Robert Barsch.
+
 2008.361: 2.2rc3
 	- Improve mstl_addmsr() sorting and suturing logic so that it
 	matches the healed and sorted output from the trace group routines.
