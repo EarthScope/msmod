@@ -1,5 +1,7 @@
 2010.132: 0.8
 	- Update to libmseed 2.5.1.
+	- Allow channel modification to use '.' to mean the same as the
+	input channel.
 
 2009.335: 0.7
 	- Update to libmseed 2.3.

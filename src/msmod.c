@@ -6,7 +6,7 @@
  *
  * Written by Chad Trabant, IRIS Data Management Center.
  *
- * modified 2008.354
+ * modified 2010.132
  ***************************************************************************/
 
 /* Note to future hackers:
@@ -37,7 +37,7 @@
 
 #include "dsarchive.h"
 
-#define VERSION "0.7"
+#define VERSION "0.8"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
@@ -359,7 +359,13 @@ processmods (MSRecord *msr)
   /* Modify channel code */
   if ( modchan )
     {
-      strncpy (msr->channel, modchan, sizeof(msr->channel));
+      int idx = 0;
+      while ( modchan[idx] && idx < sizeof(msr->channel) )
+	{
+	  if ( modchan[idx] != '.' )
+	    msr->channel[idx] = modchan[idx];
+	  idx++;
+	}
     }
   
   /* Modify data header indicator/quality code */
