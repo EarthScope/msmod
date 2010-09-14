@@ -360,12 +360,13 @@ processmods (MSRecord *msr)
   if ( modchan )
     {
       int idx = 0;
-      while ( modchan[idx] && idx < sizeof(msr->channel) )
+      while ( modchan[idx] && idx < (sizeof(msr->channel)-1) )
 	{
 	  if ( modchan[idx] != '.' )
 	    msr->channel[idx] = modchan[idx];
 	  idx++;
 	}
+      msr->channel[idx] = '\0';
     }
   
   /* Modify data header indicator/quality code */
