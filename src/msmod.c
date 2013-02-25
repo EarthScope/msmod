@@ -37,7 +37,7 @@
 
 #include "dsarchive.h"
 
-#define VERSION "0.8"
+#define VERSION "0.9"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
