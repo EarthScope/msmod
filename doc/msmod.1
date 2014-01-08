@@ -5,8 +5,8 @@ Mini-SEED Modifier - perform stream-based Mini-SEED modifications
 .SH SYNOPSIS
 .nf
 msmod [options] file1 [file2 file3 ...]
-
 .fi
+
 .SH DESCRIPTION
 \fBmsmod\fP is a general purpose Mini-SEED modification processor.
 Mini-SEED records are read from each input file and modified as
@@ -75,12 +75,12 @@ input files.
 .IP "-o \fIoutfile\fP"
 Write all processed Mini-SEED records to \fIoutfile\fP.
 
-.IP "-A \fIformat\fR"
+.IP "-A \fIformat\fP"
 All output records will be written to a directory/file layout defined
 by \fIformat\fP.  All directories implied in the \fIformat\fP string
 will be created if necessary.  The option may be used multiple times
 to write input records to multiple archives.  See the \fBArchive
-Format\fR section below.
+Format\fP section below.
 
 .IP "--net code"
 Specify a new network code.
@@ -205,12 +205,11 @@ substitution flags:
   \fB#\fP : the number (#) character
 .fi
 
-The flags are prefaced with either the \fB%\fP or \fB#\fP modifier.
-The \fB%\fP modifier indicates a defining flag while the \fB#\fP
-indicates a non-defining flag.  All records with the same set of
-defining flags will be written to the same file.  Non-defining flags
-will be expanded using the values in the first record for the
-resulting file name.
+The flags are prefaced with either the '%' or '#' modifier.  The '%'
+modifier indicates a defining flag while the '#' indicates a
+non-defining flag.  All records with the same set of defining flags
+will be written to the same file.  Non-defining flags will be expanded
+using the values in the first record for the resulting file name.
 
 Time flags are based on the start time of the given record.
 
