@@ -5,8 +5,6 @@
  * modifications and writes the data back out.
  *
  * Written by Chad Trabant, IRIS Data Management Center.
- *
- * modified 2010.132
  ***************************************************************************/
 
 /* Note to future hackers:
@@ -115,14 +113,14 @@ main ( int argc, char **argv )
   char matchsrc[50];
   char srcname[50];
   char stime[30];
-  
+
   int writefd = 0;
   Archive *arch;
-  
+
   /* Process input parameters */
   if (processparam (argc, argv) < 0)
     return -1;
-  
+
   /* Open the output file if specified */
   if ( outputfile )
     {
@@ -137,14 +135,14 @@ main ( int argc, char **argv )
           return -1;
         }
     }
-  
+
   flp = filelist;
-  
+
   while ( flp != 0 && ! stopflag )
     {
       if ( verbose >= 2 )
 	fprintf (stderr, "Processing: %s\n", flp->filename);
-      
+
       /* Open input file for writing if overwriting and not using stdin */
       if ( overwriteinput && strcmp (flp->filename, "_") )
 	{
@@ -155,14 +153,14 @@ main ( int argc, char **argv )
 	      flp = flp->next;
 	    }
 	}
-      
+
       /* Loop over the input file */
       for (;;)
         {
           if ( (retcode = ms_readmsr (&msr, flp->filename, reclen, &filepos,
                                       NULL, 1, 0, verbose)) != MS_NOERROR )
             break;
-          
+
           /* Check if record matches start/end time criteria */
           if ( starttime != HPTERROR && (msr->starttime < starttime) )
             {
@@ -174,7 +172,7 @@ main ( int argc, char **argv )
                 }
               continue;
             }
-          
+
           if ( endtime != HPTERROR && (msr_endtime(msr) > endtime) )
             {
               if ( verbose >= 3 )
@@ -185,12 +183,12 @@ main ( int argc, char **argv )
                 }
               continue;
             }
-          
+
           if ( match || reject )
             {
               /* Generate the srcname including the quality code */
               msr_srcname (msr, matchsrc, 1);
-	      
+
               /* Check if record is matched by the match regex */
               if ( match )
                 {
@@ -204,7 +202,7 @@ main ( int argc, char **argv )
                       continue;
                     }
                 }
-              
+
               /* Check if record is rejected by the reject regex */
               if ( reject )
                 {
@@ -219,27 +217,27 @@ main ( int argc, char **argv )
                     }
                 }
             }
-	  
+
           if ( verbose )
 	    {
               msr_print (msr, verbose-1);
             }
-	  
+
 	  /* Revert time to uncorrected value if correction was applied during unpacking */
 	  if ( msr->fsdh->time_correct != 0 && ! (msr->fsdh->act_flags & 0x02) )
 	    {
 	      msr->starttime = msr_starttime_uc (msr);
 	    }
-	  
+
 	  /* Perform modifications to record header */
-	  if ( processmods (msr) ) 
+	  if ( processmods (msr) )
 	    {
 	      fprintf (stderr, "ERROR modifying:\n  ");
 	      msr_print (msr, verbose-1);
 	      stopflag = 1;
 	      break;
 	    }
-	  
+
 	  /* Repack header into record */
 	  if ( msr_pack_header (msr, 1, verbose-1) < 0 )
 	    {
@@ -248,7 +246,7 @@ main ( int argc, char **argv )
 	      stopflag = 1;
 	      break;
 	    }
-	  
+
 	  /* Replace input record if specified */
 	  if ( overwriteinput && writefd )
 	    {
@@ -259,7 +257,7 @@ main ( int argc, char **argv )
 		  break;
 		}
 	    }
-	  
+
 	  /* Write to a single output file if specified */
 	  if ( ofp )
 	    {
@@ -270,7 +268,7 @@ main ( int argc, char **argv )
 		  break;
 		}
 	    }
-	  
+
 	  /* Write to Archive(s) if specified */
 	  if ( archiveroot )
 	    {
@@ -283,40 +281,40 @@ main ( int argc, char **argv )
 		      stopflag = 1;
 		      break;
 		    }
-		  
+
 		  arch = arch->next;
 		}
 	    }
-	  
+
 	  /* Update record count */
           totalrecs++;
 	} /* End of reading records from file */
-      
+
       /* Print error if not EOF and not counting down records */
       if ( retcode != MS_ENDOFFILE )
         fprintf (stderr, "Error reading %s: %s\n",
                  flp->filename, ms_errorstr(retcode));
-      
+
       /* Close input file for overwriting */
       if ( writefd )
 	{
 	  close (writefd);
 	  writefd = 0;
 	}
-      
+
       /* Make sure everything is cleaned up */
       ms_readmsr (&msr, NULL, 0, NULL, NULL, 0, 0, 0);
-      
+
       totalfiles++;
       flp = flp->next;
     } /* End of looping over file list */
-  
+
   if ( outputfile )
     fclose (ofp);
-  
+
   if ( basicsum )
     printf ("Files: %lld, Records: %lld\n", totalfiles, totalrecs);
-  
+
   freefilelist();
 
   return 0;
@@ -337,7 +335,7 @@ processmods (MSRecord *msr)
 {
   if ( ! msr )
     return -1;
-  
+
   /* Modify network code */
   if ( modnet )
     {
@@ -349,13 +347,13 @@ processmods (MSRecord *msr)
     {
       strncpy (msr->station, modsta, sizeof(msr->station));
     }
-  
+
   /* Modify location code */
   if ( modloc )
     {
       strncpy (msr->location, modloc, sizeof(msr->location));
     }
-  
+
   /* Modify channel code */
   if ( modchan )
     {
@@ -368,49 +366,49 @@ processmods (MSRecord *msr)
 	}
       msr->channel[idx] = '\0';
     }
-  
+
   /* Modify data header indicator/quality code */
   if ( modquality )
     {
       msr->dataquality = modquality;
     }
-  
+
   /* Modify time tag */
   if ( modtimeshift && msr->fsdh )
     {
       if ( verbose > 1 )
 	fprintf (stderr, "Shifting record start time by %g seconds\n", modtimeshift);
-      
+
       /* Apply time shift to starttime */
       msr->starttime += (hptime_t) (modtimeshift * HPTMODULUS);
     }
-  
+
   /* Modify time correction value and apply to the time tag */
   if ( modtimecorr && msr->fsdh )
     {
       if ( verbose > 1 )
 	fprintf (stderr, "Applying time correction of %g seconds\n", modtimeshift);
-      
+
       if ( verbose && msr->fsdh->time_correct && ! (msr->fsdh->act_flags & 0x02) )
 	fprintf (stderr, "Warning, setting time correction over an unapplied value\n");
-      
+
       /* Set the time correction applied flag (bit 1 of the activitiy flags) */
       msr->fsdh->act_flags |= 0x02;
-      
+
       /* Set the time correction field, value is units of 0.0001 seconds */
       msr->fsdh->time_correct = modtimecorr * 10000;
-      
+
       /* Apply time shift to starttime */
       msr->starttime += (hptime_t) (modtimecorr * HPTMODULUS);
     }
-  
+
   /* Modify time correction value without applying to the time tag */
   if ( modtimecorrval && msr->fsdh )
     {
       /* Set the time correction field, value is units of 0.0001 seconds */
       msr->fsdh->time_correct = modtimecorrval * 10000;
     }
-  
+
   /* Apply time correction value to the time tag */
   if ( modtimecorrapp && msr->fsdh )
     {
@@ -422,19 +420,19 @@ processmods (MSRecord *msr)
 	  msr->fsdh->act_flags |= 0x02;
 	}
     }
-  
+
   /* Modify sampling rate */
   if ( modsamprate )
     {
       msr->samprate = modsamprate;
     }
-  
+
   /* Modify activity flags */
   if ( mod0actflags )
     {
       /* Reverse sense of bit set for later XOR */
       mod0actflags ^= 0xFF;
-      
+
       if ( msr->fsdh )
 	/* XOR bit set with the activity flags */
 	msr->fsdh->act_flags &= mod0actflags;
@@ -449,13 +447,13 @@ processmods (MSRecord *msr)
       else
 	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
     }
-  
+
   /* Modify I/O flags */
   if ( mod0ioflags )
     {
       /* Reverse sense of bit set for later XOR */
       mod0ioflags ^= 0xFF;
-      
+
       if ( msr->fsdh )
 	/* XOR bit set with the I/O flags */
 	msr->fsdh->io_flags &= mod0ioflags;
@@ -476,7 +474,7 @@ processmods (MSRecord *msr)
     {
       /* Reverse sense of bit set for later XOR */
       mod0dqflags ^= 0xFF;
-      
+
       if ( msr->fsdh )
 	/* XOR bit set with the data quality flags */
 	msr->fsdh->dq_flags &= mod0dqflags;
@@ -491,28 +489,28 @@ processmods (MSRecord *msr)
       else
 	fprintf (stderr, "ERROR, no FSDH for record, that's really bad\n");
     }
-  
+
   /* Modify Blockette 100 actual sample rate */
   if ( modb100samprate )
     {
-      if ( msr->Blkt100 ) 
+      if ( msr->Blkt100 )
 	msr->Blkt100->samprate = modb100samprate;
     }
-  
+
   /* Modify Blockette 1000 encoding format */
   if ( modb1000enc )
     {
       /* This value will be copied into Blockette 1000 during packing */
       msr->encoding = modb1000enc;
     }
-  
+
   /* Modify Blockette 1001 timing quality value */
   if ( modb1001tqual )
     {
       if ( msr->Blkt1001 )
 	msr->Blkt1001->timing_qual = modb1001tqual;
     }
-  
+
   return 0;
 }  /* End of processmods() */
 
@@ -531,7 +529,7 @@ processparam (int argcount, char **argvec)
   char *rejectpattern = 0;
   char *tptr;
   char *bit,*val;
-  
+
   /* Process all command line arguments */
   for (optind = 1; optind < argcount; optind++)
     {
@@ -636,7 +634,7 @@ processparam (int argcount, char **argvec)
         {
 	  tptr = getoptval(argcount, argvec, optind++);
 	  modquality = *tptr;
-	  
+
 	  if ( ! MS_ISDATAINDICATOR(modquality) )
 	    fprintf (stderr, "WARNING: '%c' is not a recognized data quality indicator\n", modquality);
         }
@@ -664,19 +662,19 @@ processparam (int argcount, char **argvec)
         {
 	  bit = getoptval(argcount, argvec, optind++);
 	  val = bit+2;
-	  
+
 	  if ( *(bit+1) != ',' )
 	    {
 	      fprintf (stderr, "ERROR, 'bit,value' format unrecognized\n");
 	      return -1;
 	    }
-	  
+
 	  if ( *val != '0' && *val != '1' )
 	    {
 	      fprintf (stderr, "ERROR, 'value' of bit must be 0 or 1\n");
 	      return -1;
 	    }
-	  
+
 	  switch ( *bit ) {
 	  case '0': if ( *val == '0' ) mod0actflags |= 0x01; else mod1actflags |= 0x01; break;
 	  case '1': if ( *val == '0' ) mod0actflags |= 0x02; else mod1actflags |= 0x02; break;
@@ -699,13 +697,13 @@ processparam (int argcount, char **argvec)
 	      fprintf (stderr, "ERROR, 'bit,value' format unrecognized\n");
 	      return -1;
 	    }
-	  
+
 	  if ( *val != '0' && *val != '1' )
 	    {
 	      fprintf (stderr, "ERROR, 'value' of bit must be 0 or 1\n");
 	      return -1;
 	    }
-	  
+
 	  switch ( *bit ) {
 	  case '0': if ( *val == '0' ) mod0ioflags |= 0x01; else mod1ioflags |= 0x01; break;
 	  case '1': if ( *val == '0' ) mod0ioflags |= 0x02; else mod1ioflags |= 0x02; break;
@@ -717,7 +715,7 @@ processparam (int argcount, char **argvec)
 	  case '7': if ( *val == '0' ) mod0ioflags |= 0x80; else mod1ioflags |= 0x80; break;
 	  default:  fprintf (stderr, "ERROR, unrecognized I/O flag bit: '%c'\n", *bit); return -1;
 	  }
-        }      
+        }
       else if (strcmp (argvec[optind], "--dqflags") == 0)
         {
 	  bit = getoptval(argcount, argvec, optind++);
@@ -728,13 +726,13 @@ processparam (int argcount, char **argvec)
 	      fprintf (stderr, "ERROR, 'bit,value' format unrecognized\n");
 	      return -1;
 	    }
-	  
+
 	  if ( *val != '0' && *val != '1' )
 	    {
 	      fprintf (stderr, "ERROR, 'value' of bit must be 0 or 1\n");
 	      return -1;
 	    }
-	  
+
 	  switch ( *bit ) {
 	  case '0': if ( *val == '0' ) mod0dqflags |= 0x01; else mod1dqflags |= 0x01; break;
 	  case '1': if ( *val == '0' ) mod0dqflags |= 0x02; else mod1dqflags |= 0x02; break;
@@ -754,7 +752,7 @@ processparam (int argcount, char **argvec)
       else if (strcmp (argvec[optind], "--b1000encoding") == 0)
         {
 	  modb1000enc = strtol (getoptval(argcount, argvec, optind++) ,NULL,10);
-	  
+
 	  if ( modb1000enc < 0 || modb1000enc > 31 ) {
 	    fprintf (stderr, "ERROR, unrecognized encoding format: '%d'\n", modb1000enc);
 	    return -1;
@@ -763,7 +761,7 @@ processparam (int argcount, char **argvec)
       else if (strcmp (argvec[optind], "--b1001tqual") == 0)
         {
 	  modb1001tqual = strtol (getoptval(argcount, argvec, optind++) ,NULL,10);
-	  
+
 	  if ( modb1001tqual < 0 || modb1001tqual > 100 )
 	    {
 	      fprintf (stderr, "ERROR, timing quality must be 0 to 100\n");
@@ -781,7 +779,7 @@ processparam (int argcount, char **argvec)
 	  addfile (argvec[optind]);
 	}
     }
-  
+
   /* Make sure input file(s) were specified */
   if ( filelist == 0 )
     {
@@ -790,7 +788,7 @@ processparam (int argcount, char **argvec)
       fprintf (stderr, "Try %s -h for usage\n", PACKAGE);
       exit (1);
     }
-  
+
   /* Overwrite input data records if no output file(s) specified */
   if ( ! outputfile && ! archiveroot && ! overwriteinput )
     {
@@ -799,7 +797,7 @@ processparam (int argcount, char **argvec)
       fprintf (stderr, "Try %s -h for usage\n", PACKAGE);
       exit (1);
     }
-  
+
   /* Expand match pattern from a file if prefixed by '@' */
   if ( matchpattern )
     {
@@ -807,7 +805,7 @@ processparam (int argcount, char **argvec)
 	{
 	  tptr = matchpattern + 1; /* Skip the @ sign */
 	  matchpattern = 0;
-	  
+
 	  if ( readregexfile (tptr, &matchpattern) <= 0 )
 	    {
 	      fprintf (stderr, "ERROR reading match pattern regex file\n");
@@ -815,7 +813,7 @@ processparam (int argcount, char **argvec)
 	    }
 	}
     }
-  
+
   /* Expand reject pattern from a file if prefixed by '@' */
   if ( rejectpattern )
     {
@@ -823,7 +821,7 @@ processparam (int argcount, char **argvec)
 	{
 	  tptr = rejectpattern + 1; /* Skip the @ sign */
 	  rejectpattern = 0;
-	  
+
 	  if ( readregexfile (tptr, &rejectpattern) <= 0 )
 	    {
 	      fprintf (stderr, "ERROR reading reject pattern regex file\n");
@@ -831,22 +829,22 @@ processparam (int argcount, char **argvec)
 	    }
 	}
     }
-  
+
   /* Compile match and reject patterns */
   if ( matchpattern )
     {
       match = (regex_t *) malloc (sizeof(regex_t));
-      
+
       if ( regcomp (match, matchpattern, REG_EXTENDED) != 0)
 	{
 	  fprintf (stderr, "ERROR compiling match regex: '%s'\n", matchpattern);
 	}
     }
-  
+
   if ( rejectpattern )
     {
       reject = (regex_t *) malloc (sizeof(regex_t));
-      
+
       if ( regcomp (reject, rejectpattern, REG_EXTENDED) != 0)
 	{
 	  fprintf (stderr, "ERROR compiling reject regex: '%s'\n", rejectpattern);
@@ -856,14 +854,14 @@ processparam (int argcount, char **argvec)
   /* Report the program version */
   if ( verbose )
     fprintf (stderr, "%s version: %s\n", PACKAGE, VERSION);
-  
+
   return 0;
 }  /* End of processparam() */
 
 
 /***************************************************************************
  * getoptval:
- * Return the value to a command line option; checking that the value is 
+ * Return the value to a command line option; checking that the value is
  * itself not an option (starting with '-') and is not past the end of
  * the argument list.
  *
@@ -881,20 +879,20 @@ getoptval (int argcount, char **argvec, int argopt)
     exit (1);
     return 0;
   }
-  
+
   /* Special case of '-o -' usage */
   if ( (argopt+1) < argcount && strcmp (argvec[argopt], "-o") == 0 )
     if ( strcmp (argvec[argopt+1], "-") == 0 )
       return argvec[argopt+1];
-  
+
   /* Special case of '--timeshift -X' */
   if ( (argopt+1) < argcount && strcmp (argvec[argopt], "--timeshift") == 0 )
     if ( lisnumber(argvec[argopt+1]) )
       return argvec[argopt+1];
-  
+
   if ( (argopt+1) < argcount && *argvec[argopt+1] != '-' )
     return argvec[argopt+1];
-  
+
   fprintf (stderr, "ERROR Option %s requires a value, try -h for usage\n", argvec[argopt]);
   exit (1);
   return 0;
@@ -913,7 +911,7 @@ static int
 lisnumber (char *number)
 {
   int idx = 0;
-  
+
   while ( *(number+idx) )
     {
       if ( idx == 0 && *(number+idx) == '-' )
@@ -929,8 +927,8 @@ lisnumber (char *number)
 
       idx++;
     }
-  
-  return 1;      
+
+  return 1;
 }  /* End of lisnumber() */
 
 
@@ -943,31 +941,31 @@ static void
 addfile (char *filename)
 {
   Filelink *lastlp, *newlp;
-  
+
   if ( filename == NULL )
     {
       fprintf (stderr, "addfile(): No file name specified\n");
       return;
     }
-  
+
   lastlp = filelist;
   while ( lastlp != 0 )
     {
       if ( lastlp->next == 0 )
         break;
-      
+
       lastlp = lastlp->next;
     }
-  
+
   newlp = (Filelink *) malloc (sizeof (Filelink));
   newlp->filename = strdup(filename);
   newlp->next = 0;
-  
+
   if ( lastlp == 0 )
     filelist = newlp;
   else
     lastlp->next = newlp;
-  
+
 }  /* End of addfile() */
 
 
@@ -983,7 +981,7 @@ addarchive ( const char *path, const char *layout )
 {
   Archive *newarch;
   int pathlayout;
-  
+
   if ( ! path )
     {
       fprintf (stderr, "addarchive: cannot add archive with empty path\n");
@@ -991,27 +989,27 @@ addarchive ( const char *path, const char *layout )
     }
 
   newarch = (Archive *) malloc (sizeof (Archive));
-  
+
   if ( newarch == NULL )
     {
       fprintf (stderr, "addarchive: cannot allocate memory for new archive definition\n");
       return -1;
     }
-  
+
   /* Setup new entry and add it to the front of the chain */
   pathlayout = strlen (path) + 2;
   if ( layout )
     pathlayout += strlen (layout);
-  
+
   newarch->datastream.path = (char *) malloc (pathlayout);
-  
+
   if ( layout )
     snprintf (newarch->datastream.path, pathlayout, "%s/%s", path, layout);
   else
     snprintf (newarch->datastream.path, pathlayout, "%s", path);
-  
+
   newarch->datastream.grouproot = NULL;
-  
+
   if ( newarch->datastream.path == NULL )
     {
       fprintf (stderr, "addarchive: cannot allocate memory for new archive path\n");
@@ -1019,10 +1017,10 @@ addarchive ( const char *path, const char *layout )
         free (newarch);
       return -1;
     }
-  
+
   newarch->next = archiveroot;
   archiveroot = newarch;
-  
+
   return 0;
 }  /* End of addarchive() */
 
@@ -1046,7 +1044,7 @@ readregexfile (char *regexfile, char **pppattern)
   char  linepattern[1024];
   int   regexcnt = 0;
   int   newpatternsize;
-  
+
   /* Open the regex list file */
   if ( (fp = fopen (regexfile, "rb")) == NULL )
     {
@@ -1054,29 +1052,29 @@ readregexfile (char *regexfile, char **pppattern)
 	       regexfile, strerror (errno));
       return -1;
     }
-  
+
   if ( verbose )
     fprintf (stderr, "Reading regex list from %s\n", regexfile);
-  
+
   *pppattern = NULL;
-  
+
   while ( (fgets (line, sizeof(line), fp)) !=  NULL)
     {
       /* Trim spaces and skip if empty lines */
       if ( sscanf (line, " %s ", linepattern) != 1 )
 	continue;
-      
+
       /* Skip comment lines */
       if ( *linepattern == '#' )
 	continue;
-      
+
       regexcnt++;
-      
+
       /* Add regex to compound regex */
       if ( *pppattern )
 	{
 	  newpatternsize = strlen(*pppattern) + strlen(linepattern) + 4;
-	  *pppattern = realloc (*pppattern, newpatternsize);	  
+	  *pppattern = realloc (*pppattern, newpatternsize);
 	  snprintf (*pppattern, newpatternsize, "%s|(%s)", *pppattern, linepattern);
 	}
       else
@@ -1086,9 +1084,9 @@ readregexfile (char *regexfile, char **pppattern)
 	  snprintf (*pppattern, newpatternsize, "(%s)", linepattern);
 	}
     }
-  
+
   fclose (fp);
-  
+
   return regexcnt;
 }  /* End readregexfile() */
 
@@ -1102,7 +1100,7 @@ static void
 freefilelist (void)
 {
   Filelink *flp, *nextflp;
-   
+
   flp = filelist;
 
   while ( flp )
@@ -1113,7 +1111,7 @@ freefilelist (void)
     }
 
   filelist = 0;
-  
+
   return;
 }  /* End of freefilelist() */
 
@@ -1168,7 +1166,7 @@ usage (int level)
            "\n"
 	   " file#        Files(s) of Mini-SEED records for input\n"
 	   "\n");
-  
+
   if  ( level )
     {
       fprintf (stderr,
