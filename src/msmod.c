@@ -35,7 +35,7 @@
 
 #include "dsarchive.h"
 
-#define VERSION "1.1"
+#define VERSION "1.2"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
@@ -68,6 +68,8 @@ static flag     basicsum       = 0;    /* Controls printing of basic summary */
 static int      reclen         = -1;   /* Input data record length, autodetected in most cases */
 static hptime_t starttime      = HPTERROR;  /* Limit to records after starttime */
 static hptime_t endtime        = HPTERROR;  /* Limit to records before endtime */
+static hptime_t starttimecont  = HPTERROR;  /* Limit to records that contain or start after starttime */
+static hptime_t endtimecont    = HPTERROR;  /* Limit to records that contain or end before endtime */
 static regex_t *match          = 0;    /* Compiled match regex */
 static regex_t *reject         = 0;    /* Compiled reject regex */
 static char    *outputfile     = 0;    /* Single output file */
@@ -179,10 +181,38 @@ main ( int argc, char **argv )
                 {
                   msr_srcname (msr, srcname, 1);
                   ms_hptime2seedtimestr (msr->starttime, stime, 1);
-                  fprintf (stderr, "Skipping (starttime) %s, %s\n", srcname, stime);
+                  fprintf (stderr, "Skipping (endtime) %s, %s\n", srcname, stime);
                 }
               continue;
             }
+
+          /* Check if record matches start/end time criteria */
+          if ( starttimecont != HPTERROR || endtimecont != HPTERROR )
+          {
+            hptime_t recendtime = msr_endtime (msr);
+
+            if ( starttimecont != HPTERROR && (msr->starttime < starttimecont && ! (msr->starttime <= starttimecont && recendtime >= starttimecont)) )
+            {
+              if ( verbose >= 3 )
+              {
+                msr_srcname (msr, srcname, 1);
+                ms_hptime2seedtimestr (msr->starttime, stime, 1);
+                ms_log (1, "Skipping (starttime contains) %s, %s\n", srcname, stime);
+              }
+              continue;
+            }
+
+            if ( endtimecont != HPTERROR && (recendtime > endtimecont && ! (msr->starttime <= endtimecont && recendtime >= endtimecont)) )
+            {
+              if ( verbose >= 3 )
+              {
+                msr_srcname (msr, srcname, 1);
+                ms_hptime2seedtimestr (msr->starttime, stime, 1);
+                ms_log (1, "Skipping (endtime contains) %s, %s\n", srcname, stime);
+              }
+              continue;
+            }
+          }
 
           if ( match || reject )
             {
@@ -566,6 +596,18 @@ processparam (int argcount, char **argvec)
 	{
 	  endtime = ms_seedtimestr2hptime (getoptval(argcount, argvec, optind++));
 	  if ( endtime == HPTERROR )
+	    return -1;
+	}
+      else if (strcmp (argvec[optind], "-tsc") == 0)
+	{
+	  starttimecont = ms_seedtimestr2hptime (getoptval(argcount, argvec, optind++));
+	  if ( starttimecont == HPTERROR )
+	    return -1;
+	}
+      else if (strcmp (argvec[optind], "-tec") == 0)
+	{
+	  endtimecont = ms_seedtimestr2hptime (getoptval(argcount, argvec, optind++));
+	  if ( endtimecont == HPTERROR )
 	    return -1;
 	}
       else if (strcmp (argvec[optind], "-M") == 0)
@@ -1136,6 +1178,8 @@ usage (int level)
 	   " ## Data selection options ##\n"
 	   " -ts time     Limit to records that start after time\n"
 	   " -te time     Limit to records that end before time\n"
+           " -tsc time    Limit to records that contain or start after time\n"
+	   " -tec time    Limit to records that contain or end before time\n"
 	   "                time format: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' delimiters: [,:.]\n"
 	   " -M match     Limit to records matching the specified regular expression\n"
 	   " -R reject    Limit to records not matchint the specfied regular expression\n"

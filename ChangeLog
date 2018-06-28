@@ -1,5 +1,6 @@
-2018.178:
+2018.178: 1.2
 	- Update to libmseed 2.19.5.
+	- Add -tsc and -tec options for time windowing containing times.
 
 2016.286: 1.1:
 	- Update to libmseed 2.18.

@@ -1,4 +1,4 @@
-.TH MSMOD 1 2008/12/19
+.TH MSMOD 1 2018/06/27
 .SH NAME
 Mini-SEED Modifier - perform stream-based Mini-SEED modifications
 
@@ -46,13 +46,25 @@ of samples they included after processing all input records.
 
 .IP "-ts \fItime\fP"
 Limit processing to Mini-SEED records that start after \fItime\fP.
-The format of the \fItime\fP arguement
+The format of the \fItime\fP argument
 is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either
 commas (,), colons (:) or periods (.).
 
 .IP "-te \fItime\fP"
 Limit processing to Mini-SEED records that end before \fItime\fP.
-The format of the \fItime\fP arguement
+The format of the \fItime\fP argument
+is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either
+commas (,), colons (:) or periods (.).
+
+.IP "-tsc \fItime\fP"
+Limit processing to Mini-SEED records that contain or start after
+\fItime\fP.  The format of the \fItime\fP argument
+is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either
+commas (,), colons (:) or periods (.).
+
+.IP "-tec \fItime\fP"
+Limit processing to Mini-SEED records that contain or end before
+\fItime\fP.  The format of the \fItime\fP argument
 is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either
 commas (,), colons (:) or periods (.).
 
