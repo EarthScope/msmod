@@ -1236,7 +1236,7 @@ usage (int level)
                "  M : minute, 2 digits zero padded\n"
                "  S : second, 2 digits zero padded\n"
                "  F : fractional seconds, 4 digits zero padded\n"
-               "  q : single character record quality indicator (D, R, Q)\n"
+               "  q : single character record quality indicator (D, R, Q, M)\n"
                "  L : data record length in bytes\n"
                "  r : Sample rate (Hz) as a rounded integer\n"
                "  R : Sample rate (Hz) as a float with 6 digit precision\n"
