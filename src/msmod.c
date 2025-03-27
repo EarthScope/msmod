@@ -35,7 +35,7 @@
 
 #include "dsarchive.h"
 
-#define VERSION "1.2"
+#define VERSION "1.2.1"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
@@ -557,6 +557,7 @@ processparam (int argcount, char **argvec)
   int optind;
   char *matchpattern = 0;
   char *rejectpattern = 0;
+  char *ccfilename = NULL;
   char *tptr;
   char *bit,*val;
 
@@ -609,6 +610,10 @@ processparam (int argcount, char **argvec)
 	  endtimecont = ms_seedtimestr2hptime (getoptval(argcount, argvec, optind++));
 	  if ( endtimecont == HPTERROR )
 	    return -1;
+	}
+      else if (strcmp (argvec[optind], "-cc") == 0)
+	{
+	  ccfilename = getoptval(argcount, argvec, optind++);
 	}
       else if (strcmp (argvec[optind], "-M") == 0)
 	{
@@ -1181,6 +1186,7 @@ usage (int level)
            " -tsc time    Limit to records that contain or start after time\n"
 	   " -tec time    Limit to records that contain or end before time\n"
 	   "                time format: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' delimiters: [,:.]\n"
+           " -cc CCFILENAME      # Clock correction parameters.  Type '-H' for details\n"
 	   " -M match     Limit to records matching the specified regular expression\n"
 	   " -R reject    Limit to records not matchint the specfied regular expression\n"
 	   "                Regular expressions are applied to: 'NET_STA_LOC_CHAN_QUAL'\n"
@@ -1249,5 +1255,15 @@ usage (int level)
                "same file. Non-defining flags will be expanded using the values in the\n"
                "first record for the resulting file name.\n"
                "\n");
+      fprintf (stderr,
+               "\n"
+	       "  # The clock correction (-cc option) file format is: #\n"
+	       " type: {keyword} {parameters}\n"
+	       " # Instrument Time     Reference Time\n"
+	       " {instrument_time_0}   {reference_time_0}\n"
+	       " {instrument_time_1}   {reference_time_1}\n"
+	       " ....\n"
+               "\n");
+
     }
 }  /* End of usage() */
