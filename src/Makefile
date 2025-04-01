@@ -7,6 +7,7 @@
 # Options specific for GCC
 GCC = gcc
 GCCFLAGS = -g -Wall -I../libmseed
+CFLAGS = -g
 
 # Required compiler parameters
 REQCFLAGS = -I../libmseed

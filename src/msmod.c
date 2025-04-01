@@ -53,6 +53,16 @@ typedef struct Archive_s {
   struct Archive_s *next;
 } Archive;
 
+typedef struct ClockCorrConfig_s {
+  char type[20];
+  hptime_t *inst_time;
+  hptime_t *ref_time;
+  int num_records;
+  double *params;
+  int num_params;
+} ClockCorrConfig;
+
+
 static int processmods (MSRecord *msr);
 static int processparam (int argcount, char **argvec);
 static char *getoptval (int argcount, char **argvec, int argopt);
@@ -61,6 +71,7 @@ static int lisnumber (char *number);
 static int  addarchive(const char *path, const char *layout);
 static int readregexfile (char *regexfile, char **pppattern);
 static void freefilelist (void);
+static ClockCorrConfig *read_cc_config(char *ccfilename);
 static void usage (int level);
 
 static flag     verbose        = 0;
@@ -76,6 +87,7 @@ static char    *outputfile     = 0;    /* Single output file */
 static Archive *archiveroot    = 0;    /* Output file structures */
 static flag     overwriteinput = 0;    /* Overwrite input records after modifying */
 static Filelink *filelist = 0;
+static ClockCorrConfig *cc_config = NULL;  /*Structure holding Clock Correction config */
 
 /* Modification specifiers */
 static char    *modnet          = 0;
@@ -611,10 +623,6 @@ processparam (int argcount, char **argvec)
 	  if ( endtimecont == HPTERROR )
 	    return -1;
 	}
-      else if (strcmp (argvec[optind], "-cc") == 0)
-	{
-	  ccfilename = getoptval(argcount, argvec, optind++);
-	}
       else if (strcmp (argvec[optind], "-M") == 0)
 	{
 	  matchpattern = getoptval(argcount, argvec, optind++);
@@ -677,6 +685,10 @@ processparam (int argcount, char **argvec)
         {
 	  modchan = getoptval(argcount, argvec, optind++);
         }
+      else if (strcmp (argvec[optind], "--cc") == 0)
+	{
+	  ccfilename = getoptval(argcount, argvec, optind++);
+	}
       else if (strcmp (argvec[optind], "--quality") == 0)
         {
 	  tptr = getoptval(argcount, argvec, optind++);
@@ -897,6 +909,19 @@ processparam (int argcount, char **argvec)
 	  fprintf (stderr, "ERROR compiling reject regex: '%s'\n", rejectpattern);
 	}
     }
+
+  /* Read Clock Correction parameter file */
+  if ( ccfilename )
+    {
+      cc_config = read_cc_config(ccfilename);
+
+      if (!cc_config)
+	{
+	  fprintf (stderr, "ERROR reading CC configuration: '%s'\n", ccfilename);
+           exit (1);
+	}
+    }
+
 
   /* Report the program version */
   if ( verbose )
@@ -1186,7 +1211,6 @@ usage (int level)
            " -tsc time    Limit to records that contain or start after time\n"
 	   " -tec time    Limit to records that contain or end before time\n"
 	   "                time format: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' delimiters: [,:.]\n"
-           " -cc CCFILENAME      # Clock correction parameters.  Type '-H' for details\n"
 	   " -M match     Limit to records matching the specified regular expression\n"
 	   " -R reject    Limit to records not matchint the specfied regular expression\n"
 	   "                Regular expressions are applied to: 'NET_STA_LOC_CHAN_QUAL'\n"
@@ -1208,6 +1232,8 @@ usage (int level)
 /*         " --b100samprate rate    Change the Blockette 100 actual sample rate field\n" */
            " --b1000encoding enc    Change the Blockette 1000 data encoding format field\n"
            " --b1001tqual percent   Change the Blockette 1001 timing quality field (0-100)\n"
+           " --cc CCFILENAME         Apply clock correction using params from CCFILENAME. '-H' for details\n"
+
            "\n"
 	   " ## Output options ##\n"
 	   " -i           Modify the input files in-place\n"
@@ -1257,7 +1283,7 @@ usage (int level)
                "\n");
       fprintf (stderr,
                "\n"
-	       "  # The clock correction (-cc option) file format is: #\n"
+	       "  # The clock correction (--cc option) file format is: #\n"
 	       " type: {keyword} {parameters}\n"
 	       " # Instrument Time     Reference Time\n"
 	       " {instrument_time_0}   {reference_time_0}\n"
@@ -1267,3 +1293,170 @@ usage (int level)
 
     }
 }  /* End of usage() */
+
+int timestr2hptime(const char *timestr, hptime_t *out_hptime)  {
+
+     BTime bt;
+     
+     if (0 != timestr2btime(timestr, &bt))  {
+         fprintf(stderr, "Failed to parse time string %s\n", timestr);
+         return -1;
+    }
+    *out_hptime = ms_btime2hptime ( &bt );
+    if (HPTERROR == *out_hptime)   {
+         fprintf(stderr, "Failed to convert BT structure to hptime: %s\n", timestr);
+         return -1;
+    }
+
+    return 0;
+}
+
+
+/**
+ * Parses an ISO8601 time string and fills the BTime structure.
+ *
+ * Supported formats:
+ *   "YYYY-MM-DDTHH:MM:SSZ"
+ *   "YYYY-MM-DDTHH:MM:SS.xxxZ"   (fractional seconds; xxx can be 1-4 digits)
+ *
+ * @param timestr Input time string.
+ * @param bt Pointer to BTime structure to be filled.
+ * @return 0 on success, non-zero on error.
+ */
+int timestr2btime(const char *timestr, BTime *bt) {
+    if (timestr == NULL || bt == NULL)
+        return -1;
+
+
+    int year, month, day, hour, min, sec;
+    int consumed = 0;
+
+    /* First, parse the mandatory part */
+    int n = sscanf(timestr, "%4d-%2d-%2dT%2d:%2d:%2d%n",
+                   &year, &month, &day, &hour, &min, &sec, &consumed);
+    if (n != 6) {
+        fprintf(stderr, "Error parsing date/time part.\n");
+        return -1;
+    }
+
+    /* Initialize BTime fields */
+    memset(bt, 0, sizeof(BTime));   
+    bt->year = (uint16_t) year;
+    (void) ms_md2doy(year, month, day, (int *)&(bt->day));
+    bt->hour = (uint8_t) hour;
+    bt->min = (uint8_t) min;
+    bt->sec = (uint8_t) sec;
+    bt->unused = 0;
+    bt->fract = 0;  // default: no fractional seconds
+
+    const char *p = timestr + consumed;
+
+    /* Check for fractional seconds */
+    if (*p == '.') {
+        p++;  // skip the dot
+        char fracStr[5] = {0}; // up to 4 digits plus null terminator
+        int i = 0;
+        while (i < 4 && isdigit((unsigned char)p[i])) {
+            fracStr[i] = p[i];
+            i++;
+        }
+        fracStr[i] = '\0';
+
+        if (i > 0) {
+            int fracVal = atoi(fracStr);
+            /* If fewer than 4 digits, scale up.
+               For example: "001" => 1 becomes 100 if we want 4-digit resolution. */
+            for (; i < 4; i++)
+                fracVal *= 10;
+            bt->fract = (uint16_t) fracVal;
+        }
+        /* Move pointer past the fractional part digits */
+        while (isdigit((unsigned char)*p))
+            p++;
+    }
+
+    /* Expect a 'Z' at the end */
+    if (*p != 'Z') {
+        fprintf(stderr, "Time string missing terminal 'Z'\n");
+        return -1;
+    }
+    return 0;
+}
+ClockCorrConfig *read_cc_config(char *ccfilename)
+{
+#define MAX_LINE_LENGTH 256
+#define MAX_TYPE_LENGTH 20
+
+       FILE *fd;
+       hptime_t hptime_t_inst, hptime_t_ref;
+       char line[MAX_LINE_LENGTH];
+       char instTime [MAX_LINE_LENGTH];
+       char refTime [MAX_LINE_LENGTH];
+       int timeRecordsCount = 0;
+
+       fd = fopen(ccfilename, "r");                          
+       if(!fd)
+       {
+              fprintf (stderr, "ERROR opening clock correction parameter file %s\n", ccfilename);
+              return NULL;
+       }
+       cc_config = (ClockCorrConfig *) calloc(sizeof(ClockCorrConfig), 1);	
+       if (!cc_config)
+       {
+              fprintf (stderr, "ERROR allocating memory for ClockCorrConfig structure\n");
+              fclose(fd);
+              return NULL;
+       }
+       cc_config->num_records = 0;  // not really needed but ....
+
+        while (fgets(line, sizeof(line), fd) != NULL) {
+              // Remove newline if present
+              line[strcspn(line, "\r\n")] = 0;
+
+              // Check if line starts with "#"
+              if (strncmp(line, "#", 1) == 0) {
+                  continue;
+              }
+              // Check if line starts with "type:"
+              else if (strncmp(line, "type:", 4) == 0) {
+                   sscanf(line + 5, " %s", cc_config->type);
+                   // Check if the type of algo is valid
+              }
+             // Check if line starts with digit
+            else if (isdigit((unsigned char)line[0])) {
+                 sscanf(line, "%s %s", instTime, refTime);
+                 if (0 != timestr2hptime(instTime, &hptime_t_inst))  {
+                    fprintf(stderr, "Failed to convert to hptime_t instrument time %s\n", instTime);
+                     return NULL;
+                 }
+                 if (0 != timestr2hptime(refTime, &hptime_t_ref))  {
+                    fprintf(stderr, "Failed to convert to hptime_t reference time %s\n", instTime);
+                     return NULL;
+                 } 
+                 cc_config->num_records++;
+                 if (1 == cc_config->num_records)  {
+                   // Init arrays
+                     cc_config->inst_time = (hptime_t *) calloc(cc_config->num_records, sizeof(hptime_t));
+                     cc_config->ref_time = (hptime_t *) calloc(cc_config->num_records, sizeof(hptime_t));
+                 }  else {
+                     cc_config->inst_time = 
+                       (hptime_t *) realloc(cc_config->inst_time, cc_config->num_records * sizeof(hptime_t));
+                     cc_config->ref_time = 
+                       (hptime_t *) realloc(cc_config->ref_time, cc_config->num_records * sizeof(hptime_t));
+                 }
+                 if (!cc_config->inst_time || !cc_config->ref_time){
+                    fprintf(stderr, "Failed to allocated memory for time array\n");
+                     return NULL;
+                 }
+                 cc_config->inst_time[cc_config->num_records-1] = hptime_t_inst; 
+                 cc_config->ref_time[cc_config->num_records-1] = hptime_t_ref; 
+
+                                 
+        }
+    }
+
+    fclose(fd);
+       
+             
+       return NULL;   
+}
