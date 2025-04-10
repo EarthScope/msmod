@@ -58,8 +58,8 @@ typedef struct ClockCorrConfig_s {
   hptime_t *inst_time;
   hptime_t *ref_time;
   int num_records;
-  double *params;
-  int num_params;
+  double *coeff;
+  int num_coeffs;
 } ClockCorrConfig;
 
 
@@ -72,6 +72,8 @@ static int  addarchive(const char *path, const char *layout);
 static int readregexfile (char *regexfile, char **pppattern);
 static void freefilelist (void);
 static ClockCorrConfig *read_cc_config(char *ccfilename);
+static double *parse_doubles(const char *input, int *count_out);
+
 static void usage (int level);
 
 static flag     verbose        = 0;
@@ -1382,81 +1384,158 @@ int timestr2btime(const char *timestr, BTime *bt) {
     }
     return 0;
 }
+
+
+double *parse_doubles(const char *input, int *count_out) 
+{
+    if (!input || !count_out) return NULL;
+
+    char *copy = strdup(input);
+    if (!copy) return NULL;
+
+    // First pass: count tokens
+    size_t count = 0;
+    char *token = strtok(copy, " ");
+    while (token) 
+    {
+        count++;
+        token = strtok(NULL, " ");
+    }
+    free(copy);
+
+    if (count == 0) 
+    {
+        *count_out = 0;
+        return NULL;
+    }
+
+    // Allocate array of exact size
+    double *array = malloc(count * sizeof(double));
+    if (!array) return NULL;
+
+    // Second pass: parse values
+    copy = strdup(input);
+    if (!copy) 
+    {
+        free(array);
+        return NULL;
+    }
+
+    size_t i = 0;
+    token = strtok(copy, " ");
+    while (token && i < count) 
+    {
+        array[i++] = strtod(token, NULL);
+        token = strtok(NULL, " ");
+    }
+
+    free(copy);
+    *count_out = count;
+    return array;
+}
+
 ClockCorrConfig *read_cc_config(char *ccfilename)
 {
 #define MAX_LINE_LENGTH 256
 #define MAX_TYPE_LENGTH 20
 
-       FILE *fd;
-       hptime_t hptime_t_inst, hptime_t_ref;
-       char line[MAX_LINE_LENGTH];
-       char instTime [MAX_LINE_LENGTH];
-       char refTime [MAX_LINE_LENGTH];
-       int timeRecordsCount = 0;
+   FILE *fd;
+   hptime_t hptime_t_inst, hptime_t_ref;
+   char line[MAX_LINE_LENGTH];
+   char instTime [MAX_LINE_LENGTH];
+   char refTime [MAX_LINE_LENGTH];
+   int timeRecordsCount = 0;
+   int lineNum = 0;
 
-       fd = fopen(ccfilename, "r");                          
-       if(!fd)
-       {
-              fprintf (stderr, "ERROR opening clock correction parameter file %s\n", ccfilename);
-              return NULL;
-       }
-       cc_config = (ClockCorrConfig *) calloc(sizeof(ClockCorrConfig), 1);	
-       if (!cc_config)
-       {
-              fprintf (stderr, "ERROR allocating memory for ClockCorrConfig structure\n");
-              fclose(fd);
-              return NULL;
-       }
-       cc_config->num_records = 0;  // not really needed but ....
+   fd = fopen(ccfilename, "r");                          
+   if(!fd)
+   {
+      fprintf (stderr, "ERROR: opening clock correction parameter file %s\n", ccfilename);
+      return NULL;
+   }
+   cc_config = (ClockCorrConfig *) calloc(sizeof(ClockCorrConfig), 1);	
+   if (!cc_config)
+   {
+      fprintf (stderr, "ERROR: allocating memory for ClockCorrConfig structure\n");
+      fclose(fd);
+      return NULL;
+   }
+   cc_config->num_records = 0;  // not really needed but ....
 
-        while (fgets(line, sizeof(line), fd) != NULL) {
-              // Remove newline if present
-              line[strcspn(line, "\r\n")] = 0;
+   while (fgets(line, sizeof(line), fd) != NULL) 
+   {
+      // Remove newline if present
+      line[strcspn(line, "\r\n")] = 0;
+      lineNum++;
 
-              // Check if line starts with "#"
-              if (strncmp(line, "#", 1) == 0) {
-                  continue;
-              }
-              // Check if line starts with "type:"
-              else if (strncmp(line, "type:", 4) == 0) {
-                   sscanf(line + 5, " %s", cc_config->type);
-                   // Check if the type of algo is valid
-              }
-             // Check if line starts with digit
-            else if (isdigit((unsigned char)line[0])) {
-                 sscanf(line, "%s %s", instTime, refTime);
-                 if (0 != timestr2hptime(instTime, &hptime_t_inst))  {
-                    fprintf(stderr, "Failed to convert to hptime_t instrument time %s\n", instTime);
-                     return NULL;
-                 }
-                 if (0 != timestr2hptime(refTime, &hptime_t_ref))  {
-                    fprintf(stderr, "Failed to convert to hptime_t reference time %s\n", instTime);
-                     return NULL;
-                 } 
-                 cc_config->num_records++;
-                 if (1 == cc_config->num_records)  {
-                   // Init arrays
-                     cc_config->inst_time = (hptime_t *) calloc(cc_config->num_records, sizeof(hptime_t));
-                     cc_config->ref_time = (hptime_t *) calloc(cc_config->num_records, sizeof(hptime_t));
-                 }  else {
-                     cc_config->inst_time = 
-                       (hptime_t *) realloc(cc_config->inst_time, cc_config->num_records * sizeof(hptime_t));
-                     cc_config->ref_time = 
-                       (hptime_t *) realloc(cc_config->ref_time, cc_config->num_records * sizeof(hptime_t));
-                 }
-                 if (!cc_config->inst_time || !cc_config->ref_time){
-                    fprintf(stderr, "Failed to allocated memory for time array\n");
-                     return NULL;
-                 }
-                 cc_config->inst_time[cc_config->num_records-1] = hptime_t_inst; 
-                 cc_config->ref_time[cc_config->num_records-1] = hptime_t_ref; 
-
-                                 
-        }
-    }
-
-    fclose(fd);
-       
-             
-       return NULL;   
+      // Check if line starts with "#"
+      if (strncmp(line, "#", 1) == 0) 
+      {
+         continue;
+      }
+      // Check if line starts with "type:"
+      else if (strncmp(line, "type:", 4) == 0) 
+      {
+         sscanf(line + 5, " %s", cc_config->type);
+         // Check if the type of algo is valid
+         if (0 != strncasecmp(cc_config->type,"piecewise_linear", 16) && 
+             0 != strncasecmp(cc_config->type,"cubic_spline", 12))
+         { /*If not polynomial -> error */
+            if (0 == strncasecmp(cc_config->type,"polynomial", 10))
+            {
+               /* Fill polynomial coeffs */
+               cc_config->coeff = parse_doubles(line + 17, &(cc_config->num_coeffs)); 
+               if (!cc_config->coeff)
+               {
+                  fprintf (stderr, "ERROR: Badly formatted input file: line %d\n", lineNum);
+                  return NULL;
+               }
+            }
+            else
+            {
+               fprintf (stderr, "ERROR: Badly formatted input file: line %d\n", lineNum);
+               return NULL;
+            }
+         }                                      
+      }
+      // Check if line starts with a digit: it is interpreted as time
+      else if (isdigit((unsigned char)line[0])) 
+      {
+         sscanf(line, "%s %s", instTime, refTime);
+         if (0 != timestr2hptime(instTime, &hptime_t_inst))  
+         {
+            fprintf(stderr, "ERROR: failed to convert to hptime_t instrument time %s\n", instTime);
+            return NULL;
+         }
+         if (0 != timestr2hptime(refTime, &hptime_t_ref))  
+         {
+            fprintf(stderr, "ERROR: Failed to convert to hptime_t reference time %s\n", instTime);
+            return NULL;
+         } 
+         cc_config->num_records++;
+         if (1 == cc_config->num_records)  
+         {
+            // Init arrays
+            cc_config->inst_time = (hptime_t *) calloc(cc_config->num_records, sizeof(hptime_t));
+            cc_config->ref_time = (hptime_t *) calloc(cc_config->num_records, sizeof(hptime_t));
+         }  
+         else 
+         {
+            cc_config->inst_time = 
+               (hptime_t *) realloc(cc_config->inst_time, cc_config->num_records * sizeof(hptime_t));
+            cc_config->ref_time = 
+               (hptime_t *) realloc(cc_config->ref_time, cc_config->num_records * sizeof(hptime_t));
+         }
+         if (!cc_config->inst_time || !cc_config->ref_time)
+         {
+            fprintf(stderr, "ERROR: failed to allocated memory for time array\n");
+            return NULL;
+         }
+         cc_config->inst_time[cc_config->num_records-1] = hptime_t_inst; 
+         cc_config->ref_time[cc_config->num_records-1] = hptime_t_ref;                                  
+      }
+   }
+   
+   fclose(fd);
+   return cc_config;   
 }
