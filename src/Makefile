@@ -15,7 +15,7 @@ REQCFLAGS = -I../libmseed
 BIN = msmod
 
 LDFLAGS = -L../libmseed
-LDLIBS = -lmseed
+LDLIBS = -lmseed -lm
 
 OBJS = $(BIN).o dsarchive.o
 
