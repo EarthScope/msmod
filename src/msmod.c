@@ -295,7 +295,8 @@ main ( int argc, char **argv )
 	    }
 
 	  /* Perform modifications to record header */
-	  if ( retcode = processmods (msr) )
+	  retcode = processmods (msr);
+	  if ( retcode )
 	    {
 	      fprintf (stderr, "ERROR modifying:\n  ");
 	      msr_print (msr, verbose-1);
@@ -1437,7 +1438,6 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
    char line[MAX_LINE_LENGTH];
    char instTime [MAX_LINE_LENGTH];
    char refTime [MAX_LINE_LENGTH];
-   int timeRecordsCount = 0;
    int lineNum = 0;
    short int isValid;
 
@@ -1981,7 +1981,7 @@ int
          return -1;
       }
       // Check results
-      if (fabs(cc_config->ref_time[i] - correction - cc_config->inst_time[i]) > SMALL)
+      if (abs(cc_config->ref_time[i] - correction - cc_config->inst_time[i]) > SMALL)
       {
          if (NULL == ms_hptime2isotimestr ( cc_config->inst_time[i], (char *) orig_time_str, 1))
          {
