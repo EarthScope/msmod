@@ -1266,7 +1266,7 @@ usage (int level)
 /*         " --b100samprate rate    Change the Blockette 100 actual sample rate field\n" */
            " --b1000encoding enc    Change the Blockette 1000 data encoding format field\n"
            " --b1001tqual percent   Change the Blockette 1001 timing quality field (0-100)\n"
-           " --cc CCFILENAME         Apply clock correction using params from CCFILENAME. '-H' for details\n"
+           " --cc CCFILENAME        Apply clock correction using params from CCFILENAME\n" 
 
            "\n"
 	   " ## Output options ##\n"
@@ -1279,6 +1279,26 @@ usage (int level)
 
   if  ( level )
     {
+       fprintf (stderr,
+           "\n"
+	       " # Clock correction (--cc option) #\n"
+	       "     Sets timecorrection and modifies starttime in every record according\n"
+	       "     to the specified clock drift.\n"
+	       "\n"
+	       "    Clock correction input file format:"
+	       "\n"
+	       "    {type_line}\n"
+	       "    {instrument_time_0}   {reference_time_0}\n"
+	       "    {instrument_time_1}   {reference_time_1}\n"
+	       "    ....\n"
+	       "\n"
+	       "    Possible {type_line}s:\n"
+	       "    type: piecewise_linear\n:"
+	       "    type: cubic_spline\n"
+	       "    type: polynomial a0 a1 a2 a3...\n"
+	       "\n"
+	       "    Time format: yyyy-mm-ddTHH:MM:SS(.FFFFF)Z.\n");
+    
       fprintf (stderr,
                "\n"
 	       "  # Preset format layouts #\n"
@@ -1315,16 +1335,6 @@ usage (int level)
                "same file. Non-defining flags will be expanded using the values in the\n"
                "first record for the resulting file name.\n"
                "\n");
-      fprintf (stderr,
-               "\n"
-	       "  # The clock correction (--cc option) file format is: #\n"
-	       " type: {keyword} {parameters}\n"
-	       " # Instrument Time     Reference Time\n"
-	       " {instrument_time_0}   {reference_time_0}\n"
-	       " {instrument_time_1}   {reference_time_1}\n"
-	       " ....\n"
-               "\n");
-
     }
 }  /* End of usage() */
 
