@@ -17,7 +17,7 @@ BIN = msmod
 LDFLAGS = -L../libmseed
 LDLIBS = -lmseed -lm
 
-OBJS = $(BIN).o dsarchive.o
+OBJS = $(BIN).o dsarchive.o clockcorr.o
 
 all: $(BIN)
 
