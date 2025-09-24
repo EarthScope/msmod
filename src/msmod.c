@@ -1257,22 +1257,22 @@ usage (int level)
        fprintf (stderr,
            "\n"
 	       " # Clock correction (--cc option) #\n"
-	       "     Sets timecorrection and modifies starttime in every record according\n"
+	       "     Sets record header timecorrection and starttime fields according\n"
 	       "     to the specified clock drift.\n"
 	       "\n"
-	       "    Clock correction input file format:"
+	       "    Clock correction input file format:\n"
 	       "\n"
-	       "    {type_line}\n"
+	       "    type: {type_value}\n"
 	       "    {instrument_time_0}   {reference_time_0}\n"
 	       "    {instrument_time_1}   {reference_time_1}\n"
 	       "    ....\n"
 	       "\n"
-	       "    Possible {type_line}s:\n"
-	       "    type: piecewise_linear\n:"
+	       "    Possible {type_value}s:\n"
+	       "    type: piecewise_linear\n"
 	       "    type: cubic_spline\n"
 	       "    type: polynomial a0 a1 a2 a3...\n"
 	       "\n"
-	       "    Time format: yyyy-mm-ddTHH:MM:SS(.FFFFF)Z.\n");
+	       "    {*_time_*} format: yyyy-mm-ddTHH:MM:SS(.FFFFF)Z.\n");
     
       fprintf (stderr,
                "\n"

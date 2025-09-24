@@ -694,7 +694,7 @@ int
          return -1;
       }
       // Check results
-      if (abs(cc_config->ref_time[i] - correction - cc_config->inst_time[i]) > SMALL)
+      if (llabs(cc_config->ref_time[i] - correction - cc_config->inst_time[i]) > SMALL)
       {
          if (NULL == ms_hptime2isotimestr ( cc_config->inst_time[i], (char *) orig_time_str, 1))
          {
