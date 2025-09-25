@@ -113,7 +113,7 @@ double *parse_doubles(const char *input, int *count_out)
  * @brief Reads and parses a clock correction configuration file.
  *
  * This function reads a clock correction (CC) configuration file specified by `ccfilename`.
- * It supports multiple correction types (`piecewise_linear`, `cubic-spline`, `polynomial`) and
+ * It supports multiple correction types (`piecewise_linear`, `cubic_spline`, `polynomial`) and
  * parses timestamp records and (if applicable) polynomial coefficients.
  *
  * The function performs several validations:
@@ -187,7 +187,7 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
          
          // Check if type is in the allowed list
          isValid = strncasecmp(cc_config->type,"piecewise_linear", 16) == 0 ||
-                    strncasecmp(cc_config->type,"cubic-spline", 12) == 0 ||
+                    strncasecmp(cc_config->type,"cubic_spline", 12) == 0 ||
                     strncasecmp(cc_config->type,"polynomial", 10) == 0;
 
          if (!isValid)
@@ -433,7 +433,7 @@ int
  *
  * Supported correction types:
  * - `"piecewise_linear"`: Uses linear interpolation between time pairs.
- * - `"cubic-spline"`: Uses cubic spline interpolation.
+ * - `"cubic_spline"`: Uses cubic spline interpolation.
  * - `"polynomial"`: Evaluates a fitted polynomial over instrument time.
  *
  * The computed correction is returned via the `correction` output parameter.
@@ -457,7 +457,7 @@ int
         return -1;
      if (0 == strncasecmp(cc_config->type,"piecewise_linear", 16))
         return (process_calc_cc_linear(msr_hptime, cc_config,  correction));
-     else if (0 == strncasecmp(cc_config->type, "cubic-spline", 12))
+     else if (0 == strncasecmp(cc_config->type, "cubic_spline", 12))
         return (process_calc_cc_spline(msr_hptime, cc_config,  correction));
      else if (0 == strncasecmp(cc_config->type, "polynomial", 10))
         return (process_calc_cc_polynomial(msr_hptime, cc_config,  correction));
