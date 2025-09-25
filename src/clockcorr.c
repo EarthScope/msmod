@@ -332,6 +332,7 @@ int
 
       // Apply this to the Record Start Time field
       retVal = ms_hptime2btime (msr_hptime + correction, &(msr->fsdh->start_time));
+      msr->starttime = msr_hptime + correction;
       if (retVal)
       {
          fprintf(stderr, "Call to ms_hptime2btime() failed.\n");      
@@ -354,7 +355,6 @@ int
       }
       if (NULL == ms_hptime2isotimestr ( msr_hptime, (char *) orig_time_str, 1))
       {
-      
          fprintf (stderr, "ms_hptime2isotimestr failed.");
          return -1;
       }
