@@ -192,7 +192,7 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
 
          if (!isValid)
          {
-            fprintf (stderr, "ERROR: Badly formatted input file: line %d\n", lineNum);
+            fprintf (stderr, "ERROR: unknown type %s in config: line %d\n", cc_config->type, lineNum);
             return NULL;
          }
          
@@ -202,7 +202,7 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
             cc_config->coeff = parse_doubles(line + 17, &(cc_config->num_coeffs)); 
             if (!cc_config->coeff)
             {
-               fprintf (stderr, "ERROR: Badly formatted input file: line %d\n", lineNum);
+               fprintf (stderr, "ERROR: improperly formatted polynomial coefficients: line %d\n", lineNum);
                return NULL;
             }
          }
@@ -213,12 +213,12 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
          sscanf(line, "%s %s", instTime, refTime);
          if (HPTERROR == (hptime_t_inst = ms_timestr2hptime(instTime)))  
          {
-            fprintf(stderr, "ERROR: Failed to convert to hptime_t instrument time %s\n", instTime);
+            fprintf(stderr, "ERROR: failed to convert to hptime_t instrument time %s\n", instTime);
             return NULL;
          }
          if (HPTERROR == (hptime_t_ref = ms_timestr2hptime(refTime)))  
          {
-            fprintf(stderr, "ERROR: Failed to convert to hptime_t reference time %s\n", instTime);
+            fprintf(stderr, "ERROR: failed to convert to hptime_t reference time %s\n", instTime);
             return NULL;
          } 
          cc_config->num_records++;
@@ -250,12 +250,12 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
    {
       if (cc_config->inst_time[i+1] <= cc_config->inst_time[i]) 
       {
-         fprintf(stderr, "ERROR: Non-increasing instrument times: time line {#%d}\n", (int) i+1);
+         fprintf(stderr, "ERROR: non-increasing instrument times: time line {#%d}\n", (int) i+1);
          return NULL;
       }
       if (cc_config->ref_time[i+1] <= cc_config->ref_time[i]) 
       {
-         fprintf(stderr, "ERROR: Non-increasing reference times: time line {#%d}\n", (int) i+1);
+         fprintf(stderr, "ERROR: non-increasing reference times: time line {#%d}\n", (int) i+1);
          return NULL;
       }  
    }
@@ -689,7 +689,7 @@ int
       retVal = process_calc_cc_polynomial(cc_config->inst_time[i], cc_config,  &correction);      
       if (retVal)
       {
-         fprintf(stderr, "ERROR: Polynomial does not generate reference corrected times\n");
+         fprintf(stderr, "ERROR: polynomial does not generate reference corrected times\n");
          fprintf(stderr, "ERROR: process_calc_cc_polynomial() failed\n");
          return -1;
       }
@@ -718,7 +718,7 @@ int
          }
 
 
-         fprintf(stderr, "ERROR: Polynomial does not generate reference corrected times\n");
+         fprintf(stderr, "ERROR: polynomial does not generate reference corrected times\n");
          fprintf(stderr, "INSTRUMENT_TIME             |   REFERENCE_TIME            |    CORRECTED_TIME           | CORRECTED-REFERENCE (s)\n");
          fprintf(stderr, "--------------------------- | --------------------------- | --------------------------- | -----------------------\n");
          fprintf(stderr, "%-27s | %-27s | %-27s | %10.6f\n", 
