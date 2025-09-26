@@ -371,7 +371,7 @@ int
           orig_time_str,
           corr_time_str,
           (double)correction/1000000,
-          (double)(msr_hptime  - cc_config->ref_time[0])/1000000);
+          (double)(msr_hptime - cc_config->inst_time[0])/1000000);
           
       return 0;
    }
