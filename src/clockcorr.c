@@ -725,7 +725,7 @@ int
             orig_time_str,
             ref_time_str,
             corr_time_str,
-           (double)correction/1000000);
+           (double)(cc_config->inst_time[i] + correction - cc_config->ref_time[i])/1000000);
          
          return -1;
       }
