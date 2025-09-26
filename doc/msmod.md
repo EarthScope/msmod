@@ -4,6 +4,8 @@
 1. [Synopsis](#synopsis)
 1. [Description](#description)
 1. [Options](#options)
+1. [Clock Correction Input File Format](#clock-correction-input-file-format)
+1. [Clock Correction Input File Examples](#clock-correction-input-file-examples)
 1. [Archive Format](#archive-format)
 1. [Archive Format Examples](#archive-format-examples)
 1. [Author](#author)
@@ -167,6 +169,62 @@ msmod [options] file1 [file2 file3 ...]
 <b>--b1001tqual percent</b>
 
 <p style="padding-left: 30px;">Chanage the Blockette 1001 timing quality field, valid values are 0 to 100 percent.  Further description is included in the SEED manual documentation for Blockette 1001.</p>
+
+<b>--cc CCFILENAME</b>
+
+<p style="padding-left: 30px;">Apply clock correction using parameters from CCFILENAME. The option sets timecorrection and modifies starttime in every record according to a clock drift specified in the clock correction input file. The clock correction input file format is described in a section below.</p>
+
+<p style="padding-left: 30px;">Clock correction option logging is implemented via ms_log() function. For each Modified mini-SEED record, the following information is logged in the columns:</p>
+<pre style="padding-left: 30px;">
+	       RecNo: the record number
+	       Instrument time: original instrument time (ISO8601)
+	       Corrected to reference: corrected time (ISO8601)
+	       Corrected-Instrument: corrected time minus instrument time (s)
+	       Instrument-sync_inst[0]: instrument time - instrument_time_0 (s)
+</pre>
+
+## <a id='clock-correction-input-file-format'>Clock Correction Input File Format</a>
+
+<p >Clock correction input file format is:</p>
+<pre >
+\fB
+	       type: {keyword} [{parameters}]
+	       # Instrument Time     Reference Time
+	       {instrument_time_0}   {reference_time_0}
+	       {instrument_time_1}   {reference_time_1}
+	       ....
+\fP
+</pre>
+
+<p >The times in each column must monotonically increase and the {instrument_time}s must cover the time range of the miniSEED file(s). Time format is yyyy-mm-ddTHH:MM:SS(.FFFFF)Z. Comment lines start with '#' and have no effect on processing. Possible 'type' lines are:</p>
+<pre >
+  type: <b>piecewise_linear</b>
+	       shifts instrument_time to reference_time for each provided value,
+	       linearly interpolates in between
+  type: <b>cubic_spline</b>
+	       shifts instrument_time to reference_time for each provided value,
+	       cubic spline interpolation in between
+  type: <b>polynomial</b> a0 a1 a2 a3...
+	       sets corrected_time = instrument_time_0 + a0 + a1*delta + a2*delta**2 + ...,
+	       where delta = instrument_time - instrument_time_0.
+               {instrument_time_n} and {reference_time_n} are used to validate results
+</pre>
+
+## <a id='clock-correction-input-file-examples'>Clock Correction Input File Examples</a>
+
+<pre >
+type: cubic_spline
+# Instrument time        Reference time
+2022-01-01T00:00:00Z     2022-01-01T00:00:00Z
+2022-06-01T00:00:00Z     2022-06-01T00:00:00.1Z
+2023-01-01T00:00:00Z     2023-01-01T00:00:01.5Z
+
+type: polynomial 0.001 3.38e-9 1.4e-15
+# Instrument time        Reference time
+2022-01-01T00:00:00Z     2022-01-01T00:00:00.001Z
+2022-07-01T00:00:00Z     2022-07-01T00:00:00.396Z
+2023-01-01T00:00:00Z     2023-01-01T00:00:01.500Z
+</pre>
 
 ## <a id='archive-format'>Archive Format</a>
 
