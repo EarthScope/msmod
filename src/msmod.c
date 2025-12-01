@@ -275,6 +275,11 @@ main ( int argc, char **argv )
 	    {
 	      fprintf (stderr, "ERROR modifying:\n  ");
 	      msr_print (msr, verbose-1);
+	      if (-2 == retcode) /* This is error in clock correction */
+	      {
+	         unlink(outputfile);
+	         retcode = -1; /* So we print generic error later in the code */
+	      }
 	      stopflag = 1;
 	      break;
 	    }
@@ -557,11 +562,10 @@ processmods (MSRecord *msr)
     {
        if ( process_cc(cc_config, msr) )
        {
-     	  fprintf (stderr, "ERROR, processing Clock Correction failed\n");
-     	  return -1;
-       }
-    }
-
+          ms_log (0, "ERROR, Clock Correction processing failed\n");
+     	  return -2;
+       }  
+    }    
   return 0;
 }  /* End of processmods() */
 
@@ -922,6 +926,7 @@ processparam (int argcount, char **argvec)
   /* Read Clock Correction parameter file */
   if ( ccfilename )
     {
+      ms_log (0, "Clock Correction processing started\n");
       cc_config = read_cc_config(ccfilename);
 
       if (!cc_config)

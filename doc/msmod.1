@@ -213,8 +213,7 @@ record, the following information is logged in the columns:
 Clock correction input file format is:
 .nf
 \fB
-	       type: {keyword} [{parameters}]
-	       # Instrument Time     Reference Time
+	       type: {type_value}
 	       {instrument_time_0}   {reference_time_0}
 	       {instrument_time_1}   {reference_time_1}
 	       ....
@@ -223,9 +222,9 @@ Clock correction input file format is:
 
 The times in each column must monotonically increase and the 
 {instrument_time}s must cover the time range of the miniSEED file(s).
-Time format is yyyy-mm-ddTHH:MM:SS(.FFFFF)Z.
+{*_time_*} format is yyyy-mm-ddTHH:MM:SS(.FFFFF)Z.
 Comment lines start with '#' and have no effect on processing.
-Possible 'type' lines are:
+Possible {type value}s  are:
 .nf
   type: \fBpiecewise_linear\fP
 	       shifts instrument_time to reference_time for each provided value, 

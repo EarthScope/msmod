@@ -34,7 +34,7 @@ typedef struct {
  int  process_cc(ClockCorrConfig *cc_confg, MSRecord *msr);
  ClockCorrConfig *read_cc_config(char *ccfilename);
 static double *parse_doubles(const char *input, int *count_out);
-static int process_cc_is_in_bounds(hptime_t msr_hptime, ClockCorrConfig *cc_confg);
+static int process_cc_is_in_bounds(hptime_t msr_hptime, hptime_t msr_duration, ClockCorrConfig *cc_confg);
 static int process_calc_cc(hptime_t msr_hptime, ClockCorrConfig *cc_config, hptime_t *correction);
 static int process_calc_cc_linear(hptime_t msr_hptime, ClockCorrConfig *cc_config,   hptime_t *correction);
 static int process_calc_cc_spline(hptime_t msr_hptime, ClockCorrConfig *cc_config,   hptime_t *correction);
@@ -310,14 +310,16 @@ int
       int retVal = 0;
       hptime_t  msr_hptime;
       hptime_t  correction;
+      hptime_t  msr_duration;
       static int print_log_header = 1;
       char orig_time_str[28];
       char corr_time_str[28];
 
       msr_hptime = ms_btime2hptime(&msr->fsdh->start_time);
+      msr_duration = (msr->samplecnt - 1) * (HPTMODULUS / msr->samprate);
       
       // Verify that data times are included in the "Instrument bounds"
-      retVal = process_cc_is_in_bounds(msr_hptime, cc_confg);
+      retVal = process_cc_is_in_bounds(msr_hptime, msr_duration, cc_confg);
       if (retVal)
       {
          return retVal;
@@ -404,21 +406,21 @@ int
  * @author Ilya Dricker, ISTI
  */
 int
-   process_cc_is_in_bounds(hptime_t msr_hptime, ClockCorrConfig *cc_confg)
+   process_cc_is_in_bounds(hptime_t msr_hptime, hptime_t msr_duration, ClockCorrConfig *cc_confg)
    {
       if (msr_hptime + 2000000 < cc_config->inst_time[0]) // Allow 2 second
       {
          fprintf (stderr, 
-           "Data starts before first instrument time (by %.2f seconds).\n", 
+           "ERROR, data starts before first instrument time (by %.2f seconds).\n", 
             (double) (cc_config->inst_time[0] - msr_hptime)/1000000);
             return -1;            
       }
 
-      if (msr_hptime - 1000000 > cc_config->inst_time[cc_config->num_records-1]) // allow 1 sec
+      if (msr_hptime + msr_duration - 2000000 > cc_config->inst_time[cc_config->num_records-1]) // Allow 2 sec
       {
          fprintf (stderr, 
-           "Data ends after last instrument time (by %.2f seconds).\n", 
-            (double)(msr_hptime - cc_config->inst_time[cc_config->num_records-1])/1000000);
+           "ERROR, data ends after last instrument time (by %.2f seconds).\n", 
+            (double)(msr_hptime + msr_duration - cc_config->inst_time[cc_config->num_records-1])/1000000);
             return -1;
       }
 
@@ -518,7 +520,7 @@ int
     }
 
     // If we reach here, msr_hptime is outside the known intervals
-    fprintf(stderr, "Time in MSEED header is out of interpolation bounds.\n");
+    fprintf(stderr, "ERROR, time in MSEED header is out of interpolation bounds.\n");
     return -1;
 }   
 
