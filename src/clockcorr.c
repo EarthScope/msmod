@@ -157,13 +157,13 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
    fd = fopen(ccfilename, "r");                          
    if(!fd)
    {
-      fprintf (stderr, "ERROR: opening clock correction parameter file %s\n", ccfilename);
+      ms_log (0,  "ERROR, opening clock correction parameter file %s\n", ccfilename);
       return NULL;
    }
    cc_config = (ClockCorrConfig *) calloc(sizeof(ClockCorrConfig), 1);	
    if (!cc_config)
    {
-      fprintf (stderr, "ERROR: allocating memory for ClockCorrConfig structure\n");
+      ms_log (0,  "ERROR, allocating memory for ClockCorrConfig structure\n");
       fclose(fd);
       return NULL;
    }
@@ -192,7 +192,7 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
 
          if (!isValid)
          {
-            fprintf (stderr, "ERROR: unknown type %s in config: line %d\n", cc_config->type, lineNum);
+            ms_log (0,  "ERROR, unknown type %s in config: line %d\n", cc_config->type, lineNum);
             return NULL;
          }
          
@@ -202,7 +202,7 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
             cc_config->coeff = parse_doubles(line + 17, &(cc_config->num_coeffs)); 
             if (!cc_config->coeff)
             {
-               fprintf (stderr, "ERROR: improperly formatted polynomial coefficients: line %d\n", lineNum);
+               ms_log (0,  "ERROR, improperly formatted polynomial coefficients: line %d\n", lineNum);
                return NULL;
             }
          }
@@ -213,12 +213,12 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
          sscanf(line, "%s %s", instTime, refTime);
          if (HPTERROR == (hptime_t_inst = ms_timestr2hptime(instTime)))  
          {
-            fprintf(stderr, "ERROR: failed to convert to hptime_t instrument time %s\n", instTime);
+            ms_log (0,  "ERROR, failed to convert to hptime_t instrument time %s\n", instTime);
             return NULL;
          }
          if (HPTERROR == (hptime_t_ref = ms_timestr2hptime(refTime)))  
          {
-            fprintf(stderr, "ERROR: failed to convert to hptime_t reference time %s\n", instTime);
+            ms_log (0,  "ERROR, failed to convert to hptime_t reference time %s\n", instTime);
             return NULL;
          } 
          cc_config->num_records++;
@@ -237,7 +237,7 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
          }
          if (!cc_config->inst_time || !cc_config->ref_time)
          {
-            fprintf(stderr, "ERROR: failed to allocated memory for time array\n");
+            ms_log (0,  "ERROR, failed to allocated memory for time array\n");
             return NULL;
          }
          cc_config->inst_time[cc_config->num_records-1] = hptime_t_inst; 
@@ -250,12 +250,12 @@ ClockCorrConfig *read_cc_config(char *ccfilename)
    {
       if (cc_config->inst_time[i+1] <= cc_config->inst_time[i]) 
       {
-         fprintf(stderr, "ERROR: non-increasing instrument times: time line {#%d}\n", (int) i+1);
+         ms_log (0, "ERROR, non-increasing instrument times: time line {#%d}\n", (int) i+1);
          return NULL;
       }
       if (cc_config->ref_time[i+1] <= cc_config->ref_time[i]) 
       {
-         fprintf(stderr, "ERROR: non-increasing reference times: time line {#%d}\n", (int) i+1);
+         ms_log (0,  "ERROR, non-increasing reference times: time line {#%d}\n", (int) i+1);
          return NULL;
       }  
    }
@@ -337,7 +337,7 @@ int
       msr->starttime = msr_hptime + correction;
       if (retVal)
       {
-         fprintf(stderr, "Call to ms_hptime2btime() failed.\n");      
+         ms_log (0,  "ERROR, call to ms_hptime2btime() failed.\n");      
          return retVal;
       }
       
@@ -357,14 +357,14 @@ int
       }
       if (NULL == ms_hptime2isotimestr ( msr_hptime, (char *) orig_time_str, 1))
       {
-         fprintf (stderr, "ms_hptime2isotimestr failed.");
+         ms_log (0,  "ERROR, ms_hptime2isotimestr failed.");
          return -1;
       }
 
       if (NULL == ms_hptime2isotimestr ( msr_hptime + correction, (char *)corr_time_str, 1))
       {
       
-         fprintf (stderr, "ms_hptime2isotimestr failed.");
+         ms_log (0,  "ERROR, ms_hptime2isotimestr failed.");
          return -1;
       }
 
@@ -410,7 +410,7 @@ int
    {
       if (msr_hptime + 2000000 < cc_config->inst_time[0]) // Allow 2 second
       {
-         fprintf (stderr, 
+         ms_log (0,  
            "ERROR, data starts before first instrument time (by %.2f seconds).\n", 
             (double) (cc_config->inst_time[0] - msr_hptime)/1000000);
             return -1;            
@@ -418,7 +418,7 @@ int
 
       if (msr_hptime + msr_duration - 2000000 > cc_config->inst_time[cc_config->num_records-1]) // Allow 2 sec
       {
-         fprintf (stderr, 
+         ms_log (0,  
            "ERROR, data ends after last instrument time (by %.2f seconds).\n", 
             (double)(msr_hptime + msr_duration - cc_config->inst_time[cc_config->num_records-1])/1000000);
             return -1;
@@ -465,7 +465,7 @@ int
         return (process_calc_cc_polynomial(msr_hptime, cc_config,  correction));
      else
      {
-        fprintf(stderr, "ERROR: clock correction <type> %s is not valid\n", cc_config->type);
+        ms_log (0,  "ERROR, clock correction <type> %s is not valid\n", cc_config->type);
         return -1;
      }
      return 0;   
@@ -488,7 +488,7 @@ int
 {
     if (cc_config->num_records < 2) 
     {
-        fprintf(stderr, "Need at least 2 points in linear time correction.\n");
+        ms_log (0,  "ERROR, need at least 2 points in linear time correction.\n");
         return -1;
     }
 
@@ -508,7 +508,7 @@ int
 
             // Avoid division by zero
             if (inst_delta == 0.0) {
-                fprintf(stderr, "Warning: cc_config->inst_time[%zu] == cc_config->inst_time[%zu+1]\n", n, n);
+                ms_log (0,  "WARNING, cc_config->inst_time[%zu] == cc_config->inst_time[%zu+1]\n", n, n);
                 *correction = 0;
                 return 0;
             }
@@ -520,7 +520,7 @@ int
     }
 
     // If we reach here, msr_hptime is outside the known intervals
-    fprintf(stderr, "ERROR, time in MSEED header is out of interpolation bounds.\n");
+    ms_log (0,  "ERROR, time in MSEED header is out of interpolation bounds.\n");
     return -1;
 }   
 
@@ -555,7 +555,7 @@ int
 {
    if (!cc_config || !cc_config->inst_time || !cc_config->ref_time || cc_config->num_records < 2)
    {
-      fprintf(stderr, "Invalid ClockCorrConfig for spline correction.\n");
+      ms_log (0,  "ERROR, invalid ClockCorrConfig for spline correction.\n");
       return -1;
    }
 
@@ -564,7 +564,7 @@ int
    double *y = malloc(n * sizeof(double));
    if (!x || !y)
    {
-      fprintf(stderr, "Memory allocation failed.\n");
+      ms_log (0,  "ERROR, memory allocation failed.\n");
       free(x); free(y);
       return -1;
    }
@@ -582,7 +582,7 @@ int
    CubicSpline spline;
    if (build_cubic_spline(x, y, n, &spline) != 0)
    {
-      fprintf(stderr, "Spline construction failed.\n");
+      ms_log (0, "ERROR, spline construction failed.\n");
       free(x); free(y);
       return -1;
    }
@@ -620,13 +620,13 @@ int
 {
    if (!cc_config || !cc_config->coeff || cc_config->num_coeffs < 1)   
    {
-      fprintf(stderr, "Invalid polynomial configuration.\n");
+      ms_log (0,  "ERROR, invalid polynomial configuration.\n");
       return -1;
    }
 
    if (!cc_config->ref_time) 
    {
-      fprintf(stderr, "ref_time[0] required to calculate dT.\n");
+      ms_log (0,  "WARNING, ref_time[0] required to calculate dT.\n");
       return -1;
    }
 
@@ -691,8 +691,8 @@ int
       retVal = process_calc_cc_polynomial(cc_config->inst_time[i], cc_config,  &correction);      
       if (retVal)
       {
-         fprintf(stderr, "ERROR: polynomial does not generate reference corrected times\n");
-         fprintf(stderr, "ERROR: process_calc_cc_polynomial() failed\n");
+         ms_log (0,  "ERROR, polynomial does not generate reference corrected times\n");
+         ms_log (0,  "ERROR, process_calc_cc_polynomial() failed\n");
          return -1;
       }
       // Check results
@@ -701,29 +701,29 @@ int
          if (NULL == ms_hptime2isotimestr ( cc_config->inst_time[i], (char *) orig_time_str, 1))
          {
       
-            fprintf (stderr, "ms_hptime2isotimestr failed.");
+            ms_log (0,  "ERROR, ms_hptime2isotimestr failed.");
             return -1;
          }
 
          if (NULL == ms_hptime2isotimestr ( cc_config->inst_time[i] + correction, (char *)corr_time_str, 1))
          {
       
-            fprintf (stderr, "ms_hptime2isotimestr failed.");
+            ms_log (0, "ERROR, ms_hptime2isotimestr failed.");
             return -1;
          }
 
          if (NULL == ms_hptime2isotimestr ( cc_config->ref_time[i], (char *)ref_time_str, 1))
          {
       
-            fprintf (stderr, "ms_hptime2isotimestr failed.");
+            ms_log (0, "ERROR, ms_hptime2isotimestr failed.");
             return -1;
          }
 
 
-         fprintf(stderr, "ERROR: polynomial does not generate reference corrected times\n");
-         fprintf(stderr, "INSTRUMENT_TIME             |   REFERENCE_TIME            |    CORRECTED_TIME           | CORRECTED-REFERENCE (s)\n");
-         fprintf(stderr, "--------------------------- | --------------------------- | --------------------------- | -----------------------\n");
-         fprintf(stderr, "%-27s | %-27s | %-27s | %10.6f\n", 
+         ms_log (0,  "ERROR, polynomial does not generate reference corrected times\n");
+         ms_log (0,  "INSTRUMENT_TIME             |   REFERENCE_TIME            |    CORRECTED_TIME           | CORRECTED-REFERENCE (s)\n");
+         ms_log (0,  "--------------------------- | --------------------------- | --------------------------- | -----------------------\n");
+         ms_log (0,  "%-27s | %-27s | %-27s | %10.6f\n", 
             orig_time_str,
             ref_time_str,
             corr_time_str,
