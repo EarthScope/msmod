@@ -275,11 +275,8 @@ main ( int argc, char **argv )
 	    {
 	      fprintf (stderr, "ERROR modifying:\n  ");
 	      msr_print (msr, verbose-1);
-	      if (-2 == retcode) /* This is error in clock correction */
-	      {
-	         unlink(outputfile);
-	         retcode = -1; /* So we print generic error later in the code */
-	      }
+	      if (-8 == retcode) /* This is error in clock correction */
+	         unlink(outputfile);  /*comment this line if you don't want to delete the output file */
 	      stopflag = 1;
 	      break;
 	    }
@@ -338,9 +335,14 @@ main ( int argc, char **argv )
 
       /* Print error if not EOF and not counting down records */
       if ( retcode != MS_ENDOFFILE )
-        fprintf (stderr, "Error processing %s: %s\n",
+      { 
+        if (-8 == retcode)
+           fprintf (stderr, "Error processing %s: Clock Correction error\n",
+                 flp->filename);            
+        else
+           fprintf (stderr, "Error processing %s: %s\n",
                  flp->filename, ms_errorstr(retcode));
-
+      }
       /* Close input file for overwriting */
       if ( writefd )
 	{
@@ -362,7 +364,8 @@ main ( int argc, char **argv )
     printf ("Files: %lld, Records: %lld\n", totalfiles, totalrecs);
 
   freefilelist();
-
+  if (-8 == retcode) /* Clock correction error */
+    return 1;
   return 0;
 }  /* End of main() */
 
@@ -563,7 +566,7 @@ processmods (MSRecord *msr)
        if ( process_cc(cc_config, msr) )
        {
           ms_log (0, "ERROR, Clock Correction processing failed\n");
-     	  return -2;
+     	  return -8; /* IGD: this error code is not in libmseed: ideally we need to place it there */
        }  
     }    
   return 0;
