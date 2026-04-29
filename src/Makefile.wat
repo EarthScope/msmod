@@ -8,7 +8,7 @@
 
 cc     = wcc386
 cflags = -zq
-lflags = OPT quiet OPT map LIBRARY ..\libmseed\libmseed.lib
+lflags = OPT quiet OPT map LIBRARY ..\libmseed\libmseed.lib m.lib
 cvars  = $+$(cvars)$- -DWIN32
 
 BIN = ..\msmod.exe

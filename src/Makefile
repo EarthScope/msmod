@@ -6,7 +6,8 @@
 
 # Options specific for GCC
 GCC = gcc
-GCCFLAGS = -O2 -Wall -I../libmseed
+GCCFLAGS = -g -Wall -I../libmseed
+CFLAGS = -g
 
 # Required compiler parameters
 REQCFLAGS = -I../libmseed
@@ -14,9 +15,9 @@ REQCFLAGS = -I../libmseed
 BIN = msmod
 
 LDFLAGS = -L../libmseed
-LDLIBS = -lmseed
+LDLIBS = -lmseed -lm
 
-OBJS = $(BIN).o dsarchive.o
+OBJS = $(BIN).o dsarchive.o clockcorr.o
 
 all: $(BIN)
 

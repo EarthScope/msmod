@@ -22,6 +22,7 @@
  * with all the byte order and parsing issues.
  */
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,12 +31,14 @@
 #include <errno.h>
 #include <time.h>
 #include <regex.h>
+#include <math.h>
 
 #include <libmseed.h>
 
 #include "dsarchive.h"
+#include "clockcorr.h"
 
-#define VERSION "1.2"
+#define VERSION "1.3.0"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
@@ -53,6 +56,9 @@ typedef struct Archive_s {
   struct Archive_s *next;
 } Archive;
 
+
+
+
 static int processmods (MSRecord *msr);
 static int processparam (int argcount, char **argvec);
 static char *getoptval (int argcount, char **argvec, int argopt);
@@ -61,6 +67,8 @@ static int lisnumber (char *number);
 static int  addarchive(const char *path, const char *layout);
 static int readregexfile (char *regexfile, char **pppattern);
 static void freefilelist (void);
+
+
 static void usage (int level);
 
 static flag     verbose        = 0;
@@ -97,6 +105,8 @@ static char     mod1dqflags     = 0;
 static double   modb100samprate = 0;
 static int      modb1000enc     = 0;
 static int      modb1001tqual   = 0;
+
+ClockCorrConfig *cc_config = NULL;  /*Structure holding Clock Correction config */
 
 
 int
@@ -260,10 +270,13 @@ main ( int argc, char **argv )
 	    }
 
 	  /* Perform modifications to record header */
-	  if ( processmods (msr) )
+	  retcode = processmods (msr);
+	  if ( retcode )
 	    {
 	      fprintf (stderr, "ERROR modifying:\n  ");
 	      msr_print (msr, verbose-1);
+	      if (-8 == retcode) /* This is error in clock correction */
+	         unlink(outputfile);  /*comment this line if you don't want to delete the output file */
 	      stopflag = 1;
 	      break;
 	    }
@@ -322,9 +335,14 @@ main ( int argc, char **argv )
 
       /* Print error if not EOF and not counting down records */
       if ( retcode != MS_ENDOFFILE )
-        fprintf (stderr, "Error reading %s: %s\n",
+      {
+        if (-8 == retcode)
+           fprintf (stderr, "Error processing %s: Clock Correction error\n",
+                 flp->filename);
+        else
+           fprintf (stderr, "Error processing %s: %s\n",
                  flp->filename, ms_errorstr(retcode));
-
+      }
       /* Close input file for overwriting */
       if ( writefd )
 	{
@@ -346,7 +364,8 @@ main ( int argc, char **argv )
     printf ("Files: %lld, Records: %lld\n", totalfiles, totalrecs);
 
   freefilelist();
-
+  if (-8 == retcode) /* Clock correction error */
+    return 1;
   return 0;
 }  /* End of main() */
 
@@ -541,6 +560,15 @@ processmods (MSRecord *msr)
 	msr->Blkt1001->timing_qual = modb1001tqual;
     }
 
+  /* Do Clock Correction if requested */
+  if ( cc_config && msr->fsdh )
+    {
+       if ( process_cc(cc_config, msr) )
+       {
+          ms_log (0, "ERROR, Clock Correction processing failed\n");
+     	  return -8; /* IGD: this error code is not in libmseed: ideally we need to place it there */
+       }
+    }
   return 0;
 }  /* End of processmods() */
 
@@ -557,6 +585,7 @@ processparam (int argcount, char **argvec)
   int optind;
   char *matchpattern = 0;
   char *rejectpattern = 0;
+  char *ccfilename = NULL;
   char *tptr;
   char *bit,*val;
 
@@ -672,6 +701,10 @@ processparam (int argcount, char **argvec)
         {
 	  modchan = getoptval(argcount, argvec, optind++);
         }
+      else if (strcmp (argvec[optind], "--cc") == 0)
+	{
+	  ccfilename = getoptval(argcount, argvec, optind++);
+	}
       else if (strcmp (argvec[optind], "--quality") == 0)
         {
 	  tptr = getoptval(argcount, argvec, optind++);
@@ -892,6 +925,20 @@ processparam (int argcount, char **argvec)
 	  fprintf (stderr, "ERROR compiling reject regex: '%s'\n", rejectpattern);
 	}
     }
+
+  /* Read Clock Correction parameter file */
+  if ( ccfilename )
+    {
+      ms_log (0, "Clock Correction processing started\n");
+      cc_config = read_cc_config(ccfilename);
+
+      if (!cc_config)
+	{
+	  fprintf (stderr, "ERROR reading CC configuration: '%s'\n", ccfilename);
+           exit (1);
+	}
+    }
+
 
   /* Report the program version */
   if ( verbose )
@@ -1202,6 +1249,8 @@ usage (int level)
 /*         " --b100samprate rate    Change the Blockette 100 actual sample rate field\n" */
            " --b1000encoding enc    Change the Blockette 1000 data encoding format field\n"
            " --b1001tqual percent   Change the Blockette 1001 timing quality field (0-100)\n"
+           " --cc CCFILENAME        Apply clock correction using params from CCFILENAME\n"
+
            "\n"
 	   " ## Output options ##\n"
 	   " -i           Modify the input files in-place\n"
@@ -1215,7 +1264,7 @@ usage (int level)
     {
       fprintf (stderr,
                "\n"
-	       "  # Preset format layouts #\n"
+	       " # Preset format layouts #\n"
 	       " -CHAN dir    Write all records into separate Net.Sta.Loc.Chan files\n"
 	       " -QCHAN dir   Write all records into separate Net.Sta.Loc.Chan.Quality files\n"
 	       " -CDAY dir    Write all records into separate Net.Sta.Loc.Chan-day files\n"
@@ -1249,5 +1298,26 @@ usage (int level)
                "same file. Non-defining flags will be expanded using the values in the\n"
                "first record for the resulting file name.\n"
                "\n");
-    }
+
+      fprintf(stderr, "\n"
+                      "## Clock correction (--cc option) ##\n"
+                      "Sets record header timecorrection and starttime "
+                      "fields according\n"
+                      "to the specified clock drift.\n"
+                      "\n"
+                      "Clock correction input file format:\n"
+                      "\n"
+                      "  type: {type_value}\n"
+                      "  {instrument_time_0}   {reference_time_0}\n"
+                      "  {instrument_time_1}   {reference_time_1}\n"
+                      "  ....\n"
+                      "\n"
+                      "Possible {type_value}s:\n"
+                      "  type: piecewise_linear\n"
+                      "  type: cubic_spline\n"
+                      "  type: polynomial a0 a1 a2 a3...\n"
+                      "\n"
+                      "{*_time_*} format: yyyy-mm-ddTHH:MM:SS(.FFFFF)Z.\n"
+                      "\n");
+  }
 }  /* End of usage() */
