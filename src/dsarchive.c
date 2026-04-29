@@ -70,26 +70,26 @@ ds_streamproc (DataStream *datastream, MSRecord *msr, long suffix, int verbose)
   char pathformat[600];
   char tstr[20];
   int fnlen = 0;
-  
+
   /* Set Verbosity for ds_ functions */
   dsverbose = verbose;
-  
+
   /* Special case for stream shutdown */
   if ( ! msr )
     {
       if ( dsverbose >= 1 )
         fprintf (stderr, "Closing archiving for: %s\n", datastream->path );
-      
+
       ds_shutdown ( datastream );
       return 0;
     }
-  
+
   if ( ! msr->fsdh )
     {
       fprintf (stderr, "ds_streamproc(): msr->fsdh must be available\n");
       return -1;
     }
-  
+
   /* Build file path and name from datastream->path */
   filename[0] = '\0';
   definition[0] = '\0';
@@ -113,7 +113,7 @@ ds_streamproc (DataStream *datastream, MSRecord *msr, long suffix, int verbose)
 	  return -1;
 	}
     }
-  
+
   /* Convert normalized starttime to BTime structure */
   if ( ms_hptime2btime (msr->starttime, &stime) )
     {
@@ -121,7 +121,7 @@ ds_streamproc (DataStream *datastream, MSRecord *msr, long suffix, int verbose)
       strparse (NULL, NULL, &fnlist);
       return -1;
     }
-  
+
   while ( fnptr != 0 )
     {
       int tdy;
@@ -275,7 +275,7 @@ ds_streamproc (DataStream *datastream, MSRecord *msr, long suffix, int verbose)
 	      break;
 	    }
 	}
-      
+
       strncat (filename, p, (sizeof(filename) - fnlen));
       fnlen = strlen (filename);
 
@@ -337,7 +337,7 @@ ds_streamproc (DataStream *datastream, MSRecord *msr, long suffix, int verbose)
 	{
 	  if ( dsverbose >= 3 )
 	    fprintf (stderr, "Writing binary data samples to data stream file %s\n", filename);
-	  
+
 	  if ( !write (foundgroup->filed, msr->datasamples, msr->numsamples * ms_samplesize(msr->sampletype)) )
 	    {
 	      fprintf (stderr, "ds_streamproc: failed to write binary data samples\n");
@@ -345,15 +345,15 @@ ds_streamproc (DataStream *datastream, MSRecord *msr, long suffix, int verbose)
 	    }
 	  else
 	    {
-	      foundgroup->modtime = time (NULL);	  
+	      foundgroup->modtime = time (NULL);
 	    }
 	}
-      /* Write the data record to the appropriate file */ 
+      /* Write the data record to the appropriate file */
       else
 	{
 	  if ( dsverbose >= 3 )
 	    fprintf (stderr, "Writing data record to data stream file %s\n", filename);
-	  
+
 	  if ( !write (foundgroup->filed, msr->record, msr->reclen) )
 	    {
 	      fprintf (stderr, "ds_streamproc: failed to write data record\n");
@@ -361,13 +361,13 @@ ds_streamproc (DataStream *datastream, MSRecord *msr, long suffix, int verbose)
 	    }
 	  else
 	    {
-	      foundgroup->modtime = time (NULL);	  
+	      foundgroup->modtime = time (NULL);
 	    }
 	}
 
       return 0;
     }
-  
+
   return -1;
 }  /* End of ds_streamproc() */
 
@@ -394,22 +394,22 @@ ds_getstream (DataStream *datastream, MSRecord *msr,
   DataStreamGroup *searchgroup = NULL;
   DataStreamGroup *prevgroup   = NULL;
   time_t curtime;
-  
+
   searchgroup = datastream->grouproot;
   curtime = time (NULL);
-  
+
   /* Traverse the stream chain looking for matching streams */
   while (searchgroup != NULL)
     {
       DataStreamGroup *nextgroup  = (DataStreamGroup *) searchgroup->next;
-      
+
       if ( !strcmp (searchgroup->defkey, defkey) )
 	{
 	  if ( dsverbose >= 3 )
 	    fprintf (stderr, "Found data stream entry for key %s\n", defkey);
-	  
+
 	  foundgroup = searchgroup;
-	  
+
 	  /* Keep ds_closeidle from closing this stream */
 	  if ( foundgroup->modtime > 0 )
 	    {
@@ -418,7 +418,7 @@ ds_getstream (DataStream *datastream, MSRecord *msr,
 
 	  break;
 	}
-      
+
       prevgroup = searchgroup;
       searchgroup = nextgroup;
     }
@@ -452,31 +452,31 @@ ds_getstream (DataStream *datastream, MSRecord *msr,
 	  return NULL;
 	}
     }
-  
+
   /* Close idle stream files */
   ds_closeidle (datastream, datastream->idletimeout);
-  
+
   /* If no file is open, well, open it */
   if ( foundgroup->filed == 0 )
     {
       int filepos;
-      
+
       if ( dsverbose >= 1 )
 	fprintf (stderr, "Opening data stream file %s\n", filename);
-      
+
       if ( (foundgroup->filed = ds_openfile (datastream, filename)) == -1 )
 	{
 	  fprintf (stderr, "cannot open data stream file, %s\n", strerror (errno));
 	  return NULL;
 	}
-      
+
       if ( (filepos = (int) lseek (foundgroup->filed, (off_t) 0, SEEK_END)) < 0 )
 	{
 	  fprintf (stderr, "cannot seek in data stream file, %s\n", strerror (errno));
 	  return NULL;
-	}      
+	}
     }
-  
+
   return foundgroup;
 }  /* End of ds_getstream() */
 
@@ -499,10 +499,10 @@ ds_openfile (DataStream *datastream, const char *filename)
   struct rlimit rlim;
   int idletimeout = datastream->idletimeout;
   int oret = 0;
-  
+
   if ( (oret = open (filename, O_RDWR | O_CREAT | O_APPEND, 0644)) == -1 )
     {
-      
+
       /* Check if max number of files open */
       if ( errno == EMFILE && rlimit == 0 )
 	{
@@ -510,7 +510,7 @@ ds_openfile (DataStream *datastream, const char *filename)
 
 	  if ( dsverbose >= 1 )
 	    fprintf (stderr, "Too many open files, trying to increase limit\n");
-	  
+
 	  /* Set the soft open file limit to the hard open file limit */
 	  if ( getrlimit (RLIMIT_NOFILE, &rlim) == -1 )
 	    {
@@ -519,7 +519,7 @@ ds_openfile (DataStream *datastream, const char *filename)
 	  else
 	    {
 	      rlim.rlim_cur = rlim.rlim_max;
-	      
+
 	      if ( rlim.rlim_cur == RLIM_INFINITY )
 		{
 		  if ( dsverbose >= 2 )
@@ -530,7 +530,7 @@ ds_openfile (DataStream *datastream, const char *filename)
 		  if ( dsverbose >= 2 )
 		    fprintf (stderr, "Setting open file limit to %ld\n", (long int) rlim.rlim_cur);
 		}
-	      
+
 	      if ( setrlimit (RLIMIT_NOFILE, &rlim) == -1 )
 		{
 		  fprintf (stderr, "setrlimit failed to set open file limit\n");
@@ -543,24 +543,24 @@ ds_openfile (DataStream *datastream, const char *filename)
 		}
 	    }
 	}
-      
+
       if ( errno == EMFILE || errno == ENFILE )
 	{
 	  if ( dsverbose >= 1 )
 	    fprintf (stderr, "Too many open files, closing idle stream files\n");
-	  
+
 	  /* Close idle streams until we have free descriptors */
 	  while ( ds_closeidle (datastream, idletimeout) == 0 && idletimeout >= 0 )
 	    {
 	      idletimeout = (idletimeout / 2) - 1;
 	    }
-	  
+
 	  /* Try to open the file again */
 	  if ( (oret = open (filename, O_RDWR | O_CREAT | O_APPEND, 0644)) != -1 )
 	    return oret;
 	}
     }
-  
+
   return oret;
 }  /* End of ds_openfile() */
 
@@ -581,7 +581,7 @@ ds_closeidle (DataStream *datastream, int idletimeout)
   DataStreamGroup *prevgroup   = NULL;
   DataStreamGroup *nextgroup   = NULL;
   time_t curtime;
-  
+
   searchgroup = datastream->grouproot;
   curtime = time (NULL);
 
@@ -589,12 +589,12 @@ ds_closeidle (DataStream *datastream, int idletimeout)
   while (searchgroup != NULL)
     {
       nextgroup = searchgroup->next;
-      
+
       if ( searchgroup->modtime > 0 && (curtime - searchgroup->modtime) > idletimeout )
 	{
 	  if ( dsverbose >= 2 )
 	    fprintf (stderr, "Closing idle stream with key %s\n", searchgroup->defkey);
-	  
+
 	  /* Re-link the stream chain */
 	  if ( prevgroup != NULL )
 	    {
@@ -610,25 +610,25 @@ ds_closeidle (DataStream *datastream, int idletimeout)
 	      else
 		datastream->grouproot = NULL;
 	    }
-	  
+
 	  /* Close the associated file */
 	  if ( close (searchgroup->filed) )
 	    fprintf (stderr, "ds_closeidle(), closing data stream file, %s\n",
 		    strerror (errno));
 	  else
 	    count++;
-	  
-	  free (searchgroup->defkey); 
+
+	  free (searchgroup->defkey);
 	  free (searchgroup);
 	}
       else
 	{
 	  prevgroup = searchgroup;
 	}
-      
+
       searchgroup = nextgroup;
     }
-  
+
   return count;
 }  /* End of ds_closeidle() */
 
@@ -658,7 +658,7 @@ ds_shutdown (DataStream *datastream)
       if ( close (prevgroup->filed) )
 	fprintf (stderr, "ds_shutdown(), closing data stream file, %s\n",
 		 strerror (errno));
-      
+
       free (prevgroup->defkey);
       free (prevgroup);
     }
@@ -699,7 +699,7 @@ strparse (const char *string, const char *delim, strlist **list)
 	{
 	  /* Find delimiter */
 	  del = strstr (beg, delim);
-	  
+
 	  /* Delimiter not found or empty */
 	  if (del == NULL || strlen (delim) == 0)
 	    {

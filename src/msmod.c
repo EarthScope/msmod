@@ -38,7 +38,7 @@
 #include "dsarchive.h"
 #include "clockcorr.h"
 
-#define VERSION "1.2.1"
+#define VERSION "1.3.0"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
@@ -335,10 +335,10 @@ main ( int argc, char **argv )
 
       /* Print error if not EOF and not counting down records */
       if ( retcode != MS_ENDOFFILE )
-      { 
+      {
         if (-8 == retcode)
            fprintf (stderr, "Error processing %s: Clock Correction error\n",
-                 flp->filename);            
+                 flp->filename);
         else
            fprintf (stderr, "Error processing %s: %s\n",
                  flp->filename, ms_errorstr(retcode));
@@ -567,8 +567,8 @@ processmods (MSRecord *msr)
        {
           ms_log (0, "ERROR, Clock Correction processing failed\n");
      	  return -8; /* IGD: this error code is not in libmseed: ideally we need to place it there */
-       }  
-    }    
+       }
+    }
   return 0;
 }  /* End of processmods() */
 
