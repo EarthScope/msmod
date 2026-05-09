@@ -38,7 +38,7 @@
 #include "dsarchive.h"
 #include "clockcorr.h"
 
-#define VERSION "1.3.0"
+#define VERSION "1.3.1"
 #define PACKAGE "msmod"
 
 /* A simple bitwise AND test to return 0 or 1 */
