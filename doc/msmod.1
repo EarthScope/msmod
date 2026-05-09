@@ -1,6 +1,6 @@
-.TH MSMOD 1 2018/06/27
+.TH MSMOD 1 2026/05/09
 .SH NAME
-Mini-SEED Modifier - perform stream-based Mini-SEED modifications
+miniSEED Modifier - perform stream-based miniSEED modifications
 
 .SH SYNOPSIS
 .nf
@@ -8,8 +8,8 @@ msmod [options] file1 [file2 file3 ...]
 .fi
 
 .SH DESCRIPTION
-\fBmsmod\fP is a general purpose Mini-SEED modification processor.
-Mini-SEED records are read from each input file and modified as
+\fBmsmod\fP is a general purpose miniSEED modification processor.
+miniSEED records are read from each input file and modified as
 specified and written back out in a serial-manner.  Each modification
 is applied to all processed records.
 
@@ -24,7 +24,7 @@ also change the offsets to any included blockettes if they were not
 packed in tight sequence, the order of the blockettes will be
 preserved.
 
-When a input file is full SEED including both SEED headers and data
+When a input file is full miniSEED including both miniSEED headers and data
 records all of the headers will be skipped and completely unprocessed.
 
 .SH OPTIONS
@@ -45,37 +45,37 @@ Print a basic summary including the number of records and the number
 of samples they included after processing all input records.
 
 .IP "-ts \fItime\fP"
-Limit processing to Mini-SEED records that start after \fItime\fP.
+Limit processing to miniSEED records that start after \fItime\fP.
 The format of the \fItime\fP argument
 is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either
 commas (,), colons (:) or periods (.).
 
 .IP "-te \fItime\fP"
-Limit processing to Mini-SEED records that end before \fItime\fP.
+Limit processing to miniSEED records that end before \fItime\fP.
 The format of the \fItime\fP argument
 is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either
 commas (,), colons (:) or periods (.).
 
 .IP "-tsc \fItime\fP"
-Limit processing to Mini-SEED records that contain or start after
+Limit processing to miniSEED records that contain or start after
 \fItime\fP.  The format of the \fItime\fP argument
 is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either
 commas (,), colons (:) or periods (.).
 
 .IP "-tec \fItime\fP"
-Limit processing to Mini-SEED records that contain or end before
+Limit processing to miniSEED records that contain or end before
 \fItime\fP.  The format of the \fItime\fP argument
 is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either
 commas (,), colons (:) or periods (.).
 
 .IP "-M \fImatch\fP"
-Limit processing to Mini-SEED records that match the \fImatch\fP
+Limit processing to miniSEED records that match the \fImatch\fP
 regular expression.  For each input record a source name string
 composed of 'NET_STA_LOC_CHAN_QUAL' is created and compared to the
 regular expression.
 
 .IP "-R \fIreject\fP"
-Limit processing to Mini-SEED records that do not match the
+Limit processing to miniSEED records that do not match the
 \fIreject\fP regular expression.  For each input record a source name
 string composed of 'NET_STA_LOC_CHAN_QUAL' is created and compared to
 the regular expression.
@@ -85,7 +85,7 @@ Modify input records in-place by writing modified records back to the
 input files.
 
 .IP "-o \fIoutfile\fP"
-Write all processed Mini-SEED records to \fIoutfile\fP.
+Write all processed miniSEED records to \fIoutfile\fP.
 
 .IP "-A \fIformat\fP"
 All output records will be written to a directory/file layout defined
@@ -142,15 +142,15 @@ to both the nominal and actual (if present) sampling rate fields.
 .IP "--actflags bit,value"
 Specify an activity flag by indicating the bit to change and it's
 value.  Valid bit ranges are 0 to 6 and valid bit values are 0 and 1.
-Activity flags are defined in the SEED 2.4 manual as follows:
+Activity flags are defined in the miniSEED 2.4 manual as follows:
 
 .nf
   \fB[Bit 0]\fP : Calibration signals preset
   \fB[Bit 1]\fP : Time correction applied
   \fB[Bit 2]\fP : Beginning of an event, station trigger
   \fB[Bit 3]\fP : End of the event, station detriggers
-  \fB[Bit 4]\fP : A positive leap second happended during this record
-  \fB[Bit 5]\fP : A negative leap second happended during this record
+  \fB[Bit 4]\fP : A positive leap second happened during this record
+  \fB[Bit 5]\fP : A negative leap second happened during this record
   \fB[Bit 6]\fP : Event in progress
 .fi
 
@@ -199,14 +199,14 @@ timecorrection and modifies starttime in every record according
 to a clock drift specified in the clock correction input file. The clock correction
 input file format is described in a section below.
 
-Clock correction option logging is implemented via ms_log() function. For each Modified mini-SEED
-record, the following information is logged in the columns:
+Clock correction option logging is implemented via ms_log() function. For each
+modified miniSEED record, the following information is logged in the columns:
 .nf
 	       RecNo: the record number
 	       Instrument time: original instrument time (ISO8601)
 	       Corrected to reference: corrected time (ISO8601)
 	       Corrected-Instrument: corrected time minus instrument time (s)
-	       Instrument-sync_inst[0]: instrument time - instrument_time_0 (s) 
+	       Instrument-sync_inst[0]: instrument time - instrument_time_0 (s)
 .fi
 
 .SH "Clock correction input file format"
@@ -220,14 +220,14 @@ Clock correction input file format is:
 \fP
 .fi
 
-The times in each column must monotonically increase and the 
+The times in each column must monotonically increase and the
 {instrument_time}s must cover the time range of the miniSEED file(s).
 {*_time_*} format is yyyy-mm-ddTHH:MM:SS(.FFFFF)Z.
 Comment lines start with '#' and have no effect on processing.
 Possible {type value}s  are:
 .nf
   type: \fBpiecewise_linear\fP
-	       shifts instrument_time to reference_time for each provided value, 
+	       shifts instrument_time to reference_time for each provided value,
 	       linearly interpolates in between
   type: \fBcubic_spline\fP
 	       shifts instrument_time to reference_time for each provided value,
@@ -311,5 +311,5 @@ fields are from the first record in the file.
 .SH AUTHOR
 .nf
 Chad Trabant
-IRIS Data Management Center
+EarthScope Data Services
 .fi

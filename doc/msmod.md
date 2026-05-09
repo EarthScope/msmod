@@ -1,4 +1,4 @@
-# Mini-SEED Modifier - perform stream-based Mini-SEED modifications
+# miniSEED Modifier - perform stream-based miniSEED modifications
 
 1. [Synopsis](#synopsis)
 1. [Description](#description)
@@ -17,13 +17,13 @@ msmod [options] file1 [file2 file3 ...]
 
 ## <a id="description">Description</a>
 
-<b>msmod</b> is a general purpose Mini-SEED modification processor. Mini-SEED records are read from each input file and modified as specified and written back out in a serial-manner.  Each modification is applied to all processed records.
+<b>msmod</b> is a general purpose miniSEED modification processor. miniSEED records are read from each input file and modified as specified and written back out in a serial-manner.  Each modification is applied to all processed records.
 
 If '-' is specified standard input will be read.  Multiple input files will be processed in the order specified.
 
 The header of each record processed is repacked regardless of selected modifications, this repacking includes normalization of the sampling rate fields (e.g. a factor of 32760 and multiplier of -819 will be converted to a factor of 40 and multiplier of 1).  The repacking might also change the offsets to any included blockettes if they were not packed in tight sequence, the order of the blockettes will be preserved.
 
-When a input file is full SEED including both SEED headers and data records all of the headers will be skipped and completely unprocessed.
+When a input file is full miniSEED including both miniSEED headers and data records all of the headers will be skipped and completely unprocessed.
 
 ## <a id="options">Options</a>
 
@@ -40,28 +40,28 @@ When a input file is full SEED including both SEED headers and data records all 
   Print a basic summary including the number of records and the number of samples they included after processing all input records.
 
 - -ts <i>time</i>
-  Limit processing to Mini-SEED records that start after <i>time</i>. The format of the <i>time</i> argument is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either commas (,), colons (:) or periods (.).
+  Limit processing to miniSEED records that start after <i>time</i>. The format of the <i>time</i> argument is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either commas (,), colons (:) or periods (.).
 
 - -te <i>time</i>
-  Limit processing to Mini-SEED records that end before <i>time</i>. The format of the <i>time</i> argument is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either commas (,), colons (:) or periods (.).
+  Limit processing to miniSEED records that end before <i>time</i>. The format of the <i>time</i> argument is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either commas (,), colons (:) or periods (.).
 
 - -tsc <i>time</i>
-  Limit processing to Mini-SEED records that contain or start after <i>time</i>.  The format of the <i>time</i> argument is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either commas (,), colons (:) or periods (.).
+  Limit processing to miniSEED records that contain or start after <i>time</i>.  The format of the <i>time</i> argument is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either commas (,), colons (:) or periods (.).
 
 - -tec <i>time</i>
-  Limit processing to Mini-SEED records that contain or end before <i>time</i>.  The format of the <i>time</i> argument is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either commas (,), colons (:) or periods (.).
+  Limit processing to miniSEED records that contain or end before <i>time</i>.  The format of the <i>time</i> argument is: 'YYYY[,DDD,HH,MM,SS,FFFFFF]' where valid delimiters are either commas (,), colons (:) or periods (.).
 
 - -M <i>match</i>
-  Limit processing to Mini-SEED records that match the <i>match</i> regular expression.  For each input record a source name string composed of 'NET_STA_LOC_CHAN_QUAL' is created and compared to the regular expression.
+  Limit processing to miniSEED records that match the <i>match</i> regular expression.  For each input record a source name string composed of 'NET_STA_LOC_CHAN_QUAL' is created and compared to the regular expression.
 
 - -R <i>reject</i>
-  Limit processing to Mini-SEED records that do not match the <i>reject</i> regular expression.  For each input record a source name string composed of 'NET_STA_LOC_CHAN_QUAL' is created and compared to the regular expression.
+  Limit processing to miniSEED records that do not match the <i>reject</i> regular expression.  For each input record a source name string composed of 'NET_STA_LOC_CHAN_QUAL' is created and compared to the regular expression.
 
 - <b>-i</b>
   Modify input records in-place by writing modified records back to the input files.
 
 - -o <i>outfile</i>
-  Write all processed Mini-SEED records to <i>outfile</i>.
+  Write all processed miniSEED records to <i>outfile</i>.
 
 - -A <i>format</i>
   All output records will be written to a directory/file layout defined by <i>format</i>.  All directories implied in the <i>format</i> string will be created if necessary.  The option may be used multiple times to write input records to multiple archives.  See the \fBArchive Format\fP section below.
@@ -97,42 +97,42 @@ When a input file is full SEED including both SEED headers and data records all 
   Specify new sampling rate in samples per second.  This will be applied to both the nominal and actual (if present) sampling rate fields.
 
 - <b>--actflags bit,value</b>
-  Specify an activity flag by indicating the bit to change and it's value.  Valid bit ranges are 0 to 6 and valid bit values are 0 and 1. Activity flags are defined in the SEED 2.4 manual as follows:
+  Specify an activity flag by indicating the bit to change and it's value.  Valid bit ranges are 0 to 6 and valid bit values are 0 and 1. Activity flags are defined in the miniSEED 2.4 manual as follows:
 
   ```
-    \fB[Bit 0]\fP : Calibration signals preset
-    \fB[Bit 1]\fP : Time correction applied
-    \fB[Bit 2]\fP : Beginning of an event, station trigger
-    \fB[Bit 3]\fP : End of the event, station detriggers
-    \fB[Bit 4]\fP : A positive leap second happended during this record
-    \fB[Bit 5]\fP : A negative leap second happended during this record
-    \fB[Bit 6]\fP : Event in progress
+    [Bit 0] : Calibration signals preset
+    [Bit 1] : Time correction applied
+    [Bit 2] : Beginning of an event, station trigger
+    [Bit 3] : End of the event, station detriggers
+    [Bit 4] : A positive leap second happened during this record
+    [Bit 5] : A negative leap second happened during this record
+    [Bit 6] : Event in progress
   ```
 
 - <b>--ioflags bit,value</b>
   Specify an I/O flag by indicating the bit to change and it's value. Valid bit ranges are 0 to 5 and valid bit values are 0 and 1.  I/O flags are defined in the SEED 2.4 manual as follows:
 
   ```
-    \fB[Bit 0]\fP : Station volume parity error possibly present
-    \fB[Bit 1]\fP : Long record read (possibly no problem)
-    \fB[Bit 2]\fP : Short record read (record padded)
-    \fB[Bit 3]\fP : Start of time series
-    \fB[Bit 4]\fP : End of time series
-    \fB[Bit 5]\fP : Clock locked
+    [Bit 0] : Station volume parity error possibly present
+    [Bit 1] : Long record read (possibly no problem)
+    [Bit 2] : Short record read (record padded)
+    [Bit 3] : Start of time series
+    [Bit 4] : End of time series
+    [Bit 5] : Clock locked
   ```
 
 - <b>--dqflags bit,value</b>
   Specify a data quality flag by indicating the bit to change and it's value.  Valid bit ranges are 0 to 7 and valid bit values are 0 and 1. Data quality flags are defined in the SEED 2.4 manual as follows:
 
   ```
-    \fB[Bit 0]\fP : Amplifier saturation detected (station dependent)
-    \fB[Bit 1]\fP : Digitizer clipping detected
-    \fB[Bit 2]\fP : Spikes detected
-    \fB[Bit 3]\fP : Glitches detected
-    \fB[Bit 4]\fP : Missing/padded data preset
-    \fB[Bit 5]\fP : Telementry synchronization error
-    \fB[Bit 6]\fP : A digital filter may be charging
-    \fB[Bit 7]\fP : Time tag is questionable
+    [Bit 0] : Amplifier saturation detected (station dependent)
+    [Bit 1] : Digitizer clipping detected
+    [Bit 2] : Spikes detected
+    [Bit 3] : Glitches detected
+    [Bit 4] : Missing/padded data preset
+    [Bit 5] : Telementry synchronization error
+    [Bit 6] : A digital filter may be charging
+    [Bit 7] : Time tag is questionable
   ```
 
 - <b>--b1000encoding encoding</b>
@@ -144,7 +144,7 @@ When a input file is full SEED including both SEED headers and data records all 
 - <b>--cc CCFILENAME</b>
   Apply clock correction using parameters from CCFILENAME. The option sets timecorrection and modifies starttime in every record according to a clock drift specified in the clock correction input file. The clock correction input file format is described in a section below.
 
-  Clock correction option logging is implemented via ms_log() function. For each Modified mini-SEED record, the following information is logged in the columns:
+  Clock correction option logging is implemented via ms_log() function. For each modified miniSEED record, the following information is logged in the columns:
 
   ```
   	       RecNo: the record number
@@ -159,24 +159,24 @@ When a input file is full SEED including both SEED headers and data records all 
 Clock correction input file format is:
 
 ```
-\fB
+
 	       type: {type_value}
 	       {instrument_time_0}   {reference_time_0}
 	       {instrument_time_1}   {reference_time_1}
 	       ....
-\fP
+
 ```
 
 The times in each column must monotonically increase and the {instrument_time}s must cover the time range of the miniSEED file(s). {*_time_*} format is yyyy-mm-ddTHH:MM:SS(.FFFFF)Z. Comment lines start with '#' and have no effect on processing. Possible {type value}s  are:
 
 ```
-  type: \fBpiecewise_linear\fP
+  type: piecewise_linear
 	       shifts instrument_time to reference_time for each provided value,
 	       linearly interpolates in between
-  type: \fBcubic_spline\fP
+  type: cubic_spline
 	       shifts instrument_time to reference_time for each provided value,
 	       cubic spline interpolation in between
-  type: \fBpolynomial\fP a0 a1 a2 a3...
+  type: polynomial a0 a1 a2 a3...
 	       sets corrected_time = instrument_time_0 + a0 + a1*delta + a2*delta**2 + ...,
 	       where delta = instrument_time - instrument_time_0.
                {instrument_time_n} and {reference_time_n} are used to validate results
@@ -203,23 +203,23 @@ type: polynomial 0.001 3.38e-9 1.4e-15
 An archive format is expanded for each record using the following substitution flags:
 
 ```
-  \fBn\fP : network code, white space removed
-  \fBs\fP : station code, white space removed
-  \fBl\fP : location code, white space removed
-  \fBc\fP : channel code, white space removed
-  \fBY\fP : year, 4 digits
-  \fBy\fP : year, 2 digits zero padded
-  \fBj\fP : day of year, 3 digits zero padded
-  \fBH\fP : hour, 2 digits zero padded
-  \fBM\fP : minute, 2 digits zero padded
-  \fBS\fP : second, 2 digits zero padded
-  \fBF\fP : fractional seconds, 4 digits zero padded
-  \fBq\fP : single character record quality indicator (D, R, Q)
-  \fBL\fP : data record length in bytes
-  \fBr\fP : sample rate (Hz) as a rounded integer
-  \fBR\fP : sample rate (Hz) as a float with 6 digit precision
-  \fB%\fP : the percent (%) character
-  \fB#\fP : the number (#) character
+  n : network code, white space removed
+  s : station code, white space removed
+  l : location code, white space removed
+  c : channel code, white space removed
+  Y : year, 4 digits
+  y : year, 2 digits zero padded
+  j : day of year, 3 digits zero padded
+  H : hour, 2 digits zero padded
+  M : minute, 2 digits zero padded
+  S : second, 2 digits zero padded
+  F : fractional seconds, 4 digits zero padded
+  q : single character record quality indicator (D, R, Q)
+  L : data record length in bytes
+  r : sample rate (Hz) as a rounded integer
+  R : sample rate (Hz) as a float with 6 digit precision
+  % : the percent (%) character
+  # : the number (#) character
 ```
 
 The flags are prefaced with either the '%' or '#' modifier.  The '%' modifier indicates a defining flag while the '#' indicates a non-defining flag.  All records with the same set of defining flags will be written to the same file.  Non-defining flags will be expanded using the values in the first record for the resulting file name.
@@ -250,9 +250,9 @@ resulting in day length files because the hour, minute and second are specified 
 
 ```
 Chad Trabant
-IRIS Data Management Center
+EarthScope Data Services
 ```
 
 ---
 
-*Generated from man page dated 2018/06/27.*
+*Generated from man page dated 2026/05/09.*
